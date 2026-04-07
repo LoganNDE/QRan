@@ -3,7 +3,7 @@ import { QrCode, ArrowLeft } from 'lucide-react';
 
 export default function Terms() {
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-[100dvh] bg-gray-50">
             <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">

@@ -13,7 +13,7 @@ export default function AuthenticatedLayout({ children, header }) {
     const logout = () => router.post(route('logout'));
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-[100dvh] bg-gray-50 flex flex-col">
             {/* Navbar */}
             <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -35,7 +35,6 @@ export default function AuthenticatedLayout({ children, header }) {
                                         className="flex items-center gap-1.5 bg-gray-100 text-gray-400 px-3.5 py-2 rounded-xl text-sm font-medium cursor-not-allowed"
                                     >
                                         <Plus size={15} />
-                                        <span className="hidden sm:inline">Nuevo QR</span>
                                     </button>
                                     <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 text-white text-xs px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-normal">
                                         Límite de {qrUsage.limit} QRs alcanzado. Elimina uno para continuar.
@@ -47,7 +46,7 @@ export default function AuthenticatedLayout({ children, header }) {
                                     className="flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.97] transition-all duration-150"
                                 >
                                     <Plus size={15} />
-                                    <span className="hidden sm:inline">Nuevo QR</span>
+                                    <span className="inline">Nuevo QR</span>
                                 </Link>
                             )}
 
@@ -117,7 +116,7 @@ export default function AuthenticatedLayout({ children, header }) {
                 </div>
             )}
 
-            <main className="flex-1">{children}</main>
+            <main>{children}</main>
 
             <footer className="border-t border-gray-100 mt-auto">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-2">

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent auto-zoom on input focus in mobile browsers (iOS zooms when font-size < 16px) */
+@media (max-width: 768px) {
+    input, textarea, select {
+        font-size: max(16px, 1em) !important;
+    }
+}
+
 
 @keyframes aurora {
   from {

@@ -19,9 +19,9 @@ export default function ConfirmModal({ open, title, message, confirmLabel = 'Con
                             <AlertTriangle size={18} className="text-red-500" />
                         </div>
                     )}
-                    <div>
-                        <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-                        <p className="text-sm text-gray-500 mt-1 leading-relaxed">{message}</p>
+                    <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 break-words">{title}</h3>
+                        <p className="text-sm text-gray-500 mt-1 leading-relaxed break-words">{message}</p>
                     </div>
                 </div>
 

@@ -29,18 +29,18 @@ export default function QrCard({ qr, onToggle, onDelete }) {
             </div>
 
             {/* Stats row */}
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0">
                     <ScanLine size={13} className="text-gray-400" />
-                    <span className="font-medium text-gray-700">{qr.scans_count ?? 0}</span> escaneos
+                    <span className="font-medium text-gray-700 tabular-nums">{(qr.scans_count ?? 0).toLocaleString()}</span> escaneos
                 </div>
                 {lastScan && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400 shrink-0">
                         <Calendar size={12} />
                         {lastScan}
                     </div>
                 )}
-                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${qr.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                <span className={`ml-auto flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${qr.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {qr.is_active ? 'Activo' : 'Inactivo'}
                 </span>
             </div>

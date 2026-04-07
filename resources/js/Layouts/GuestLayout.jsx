@@ -15,7 +15,7 @@ const DOTS = [
 
 export default function GuestLayout({ children }) {
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-[100dvh] flex">
             {/* Left — branding panel */}
             <div className="hidden lg:flex lg:w-[46%] bg-black flex-col justify-between p-12 relative overflow-hidden">
                 {/* Decorative blobs */}

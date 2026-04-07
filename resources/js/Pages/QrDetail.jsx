@@ -190,8 +190,8 @@ export default function QrDetail({ qr, stats }) {
                         </div>
 
                         {/* Redirect URL */}
-                        <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-500 truncate font-mono">{redirectUrl}</span>
+                        <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2 overflow-hidden">
+                            <span className="text-xs text-gray-500 truncate font-mono min-w-0">{redirectUrl}</span>
                             <button onClick={copy} className="text-gray-400 hover:text-black transition-colors flex-shrink-0">
                                 <Copy size={14} />
                             </button>
@@ -220,7 +220,7 @@ export default function QrDetail({ qr, stats }) {
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <ScanLine size={13} /> Total escaneos
                             </div>
-                            <p className="text-3xl font-bold text-gray-900">{qr.scans_count ?? 0}</p>
+                            <p className="text-3xl font-bold text-gray-900 tabular-nums break-all">{(qr.scans_count ?? 0).toLocaleString()}</p>
                         </div>
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-2 flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
@@ -232,7 +232,7 @@ export default function QrDetail({ qr, stats }) {
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <Hash size={13} /> Slug de redirección
                             </div>
-                            <p className="text-sm font-mono text-gray-700">/r/{qr.slug}</p>
+                            <p className="text-sm font-mono text-gray-700 break-all">/r/{qr.slug}</p>
                         </div>
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function QrDetail({ qr, stats }) {
                                 <ResponsiveContainer width="100%" height={180}>
                                     <PieChart>
                                         <Pie data={stats.devices} dataKey="count" nameKey="device" cx="50%" cy="50%" outerRadius={70}
-                                            label={({ device, percent }) => `${device} ${(percent * 100).toFixed(0)}%`}
+                                            label={({ device, percent }) => `${String(device).slice(0, 8)} ${(percent * 100).toFixed(0)}%`}
                                             labelLine={false}
                                         >
                                             {stats.devices.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -368,7 +368,7 @@ export default function QrDetail({ qr, stats }) {
                                     <BarChart data={stats.countries} layout="vertical">
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
                                         <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                        <YAxis dataKey="country" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={60} axisLine={false} tickLine={false} />
+                                        <YAxis dataKey="country" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={80} axisLine={false} tickLine={false} />
                                         <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
                                         <Bar dataKey="count" fill="#000" radius={[0, 6, 6, 0]} />
                                     </BarChart>

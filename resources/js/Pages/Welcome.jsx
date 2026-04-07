@@ -24,28 +24,27 @@ export default function Welcome() {
             </nav>
 
             {/* Hero content */}
-            <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700">
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-black/5 text-gray-600 px-3 py-1.5 rounded-full mb-6 border border-black/10">
+            <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-black/5 text-gray-600 px-3 py-1.5 rounded-full mb-5 sm:mb-6 border border-black/10">
                     <Zap size={11} className="text-yellow-500" />
                     QR dinámicos · Sin fecha de caducidad
                 </span>
 
-                <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-6">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 leading-[1.15] sm:leading-[1.1] mb-4 sm:mb-6">
                     Códigos QR que<br />
                     <span className="relative inline-block">
                         evolucionan contigo
-                        <span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-black rounded-full" />
                     </span>
                 </h1>
 
-                <p className="text-lg sm:text-xl text-gray-500 mb-10 max-w-xl leading-relaxed">
+                <p className="text-sm sm:text-lg text-gray-500 mb-8 sm:mb-10 max-w-xl leading-relaxed px-2 sm:px-0">
                     Cambia el destino de tus QR en cualquier momento. Analiza cada escaneo. Sin regenerar el código.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                     <Link
                         href="/register"
-                        className="flex items-center gap-2 bg-black text-white px-7 py-3.5 rounded-2xl text-base font-medium
+                        className="flex items-center justify-center gap-2 bg-black text-white px-7 py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base font-medium w-full sm:w-auto
                             hover:bg-gray-800 active:scale-[0.98] transition-all duration-200 shadow-md shadow-black/10"
                     >
                         Crear QR gratis
@@ -53,7 +52,7 @@ export default function Welcome() {
                     </Link>
                     <Link
                         href="/login"
-                        className="flex items-center gap-2 text-gray-500 px-6 py-3.5 rounded-2xl text-base hover:text-black transition-colors"
+                        className="flex items-center justify-center gap-2 text-gray-500 px-6 py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base hover:text-black transition-colors w-full sm:w-auto"
                     >
                         Ya tengo cuenta
                     </Link>

@@ -115,7 +115,7 @@ export default function Dashboard({ qrs = [] }) {
                 {/* Stats strip */}
                 {qrs.length > 0 && (
                     <div
-                        className="grid grid-cols-2 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-3 duration-400"
+                        className="grid grid-cols-3 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-3 duration-400"
                         style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
                     >
                         {[
@@ -123,13 +123,13 @@ export default function Dashboard({ qrs = [] }) {
                             { label: 'Activos', value: activeCount, icon: ToggleRight },
                             { label: 'Escaneos totales', value: totalScans, icon: ScanLine },
                         ].map(({ label, value, icon: Icon }) => (
-                            <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+                            <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 min-w-0">
                                 <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <Icon size={17} className="text-gray-500" />
                                 </div>
-                                <div>
-                                    <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+                                <div className="min-w-0">
+                                    <p className="text-lg font-bold text-gray-900 leading-none tabular-nums truncate">{value.toLocaleString()}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{label}</p>
                                 </div>
                             </div>
                         ))}
