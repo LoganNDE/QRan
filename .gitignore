@@ -1,0 +1,41 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Laravel
+.env
+.env.backup
+.env.production
+/storage/*.key
+/storage/pail
+/public/build
+/public/hot
+/public/storage
+/bootstrap/cache/*.php
+
+# Logs & cache
+*.log
+.phpunit.result.cache
+/.phpunit.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+/.phpactor.json
+
+# Laravel Homestead
+Homestead.json
+Homestead.yaml
+/auth.json
+
+# Claude Code
+.claude/
+CLAUDE.md
+*.claude
