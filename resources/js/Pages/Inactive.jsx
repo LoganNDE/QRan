@@ -42,7 +42,7 @@ export default function Inactive() {
                     <div className="w-5 h-5 bg-black rounded-md flex items-center justify-center">
                         <QrCode size={11} className="text-white" />
                     </div>
-                    <span className="text-xs font-medium">Qran</span>
+                    <span className="text-xs font-medium uppercase">mqr</span>
                 </Link>
             </div>
         </AuroraBackground>

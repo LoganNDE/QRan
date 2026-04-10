@@ -11,10 +11,16 @@ export default function Dashboard({ qrs = [] }) {
     const [search, setSearch] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null); // qr object | null
 
-    const filtered = qrs.filter(q =>
-        q.name.toLowerCase().includes(search.toLowerCase()) ||
-        q.destination_url.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = qrs.filter(q => {
+        const s = search.toLowerCase();
+        if (!s) return true;
+        const subtitle = q.qr_type === 'vcard'
+            ? [q.meta?.vc_first_name, q.meta?.vc_last_name, q.meta?.vc_email, q.meta?.vc_company].filter(Boolean).join(' ')
+            : q.qr_type === 'wifi'
+            ? (q.meta?.wifi_ssid ?? '')
+            : q.destination_url;
+        return q.name.toLowerCase().includes(s) || subtitle.toLowerCase().includes(s);
+    });
 
     const totalScans = qrs.reduce((acc, q) => acc + (q.scans_count ?? 0), 0);
     const activeCount = qrs.filter(q => q.is_active).length;

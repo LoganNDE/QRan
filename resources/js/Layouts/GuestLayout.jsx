@@ -23,10 +23,10 @@ export default function GuestLayout({ children }) {
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/[0.04] rounded-full translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
                 <Link href="/" className="flex items-center gap-2.5 text-white z-10">
-                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center">
                         <QrCode size={18} className="text-black" />
                     </div>
-                    <span className="text-lg font-bold tracking-tight">Qran</span>
+                    <span className="text-lg font-bold tracking-tight uppercase">mqr</span>
                 </Link>
 
                 <div className="z-10">
@@ -49,7 +49,7 @@ export default function GuestLayout({ children }) {
                 </div>
 
                 <div className="z-10 space-y-1">
-                    <p className="text-gray-600 text-xs">© {new Date().getFullYear()} Qran — Logan Naranjo Rodríguez</p>
+                    <p className="text-gray-600 text-xs">© {new Date().getFullYear()} MQR — Logan Naranjo Rodríguez</p>
                     <div className="flex gap-3">
                         <Link href="/privacy" className="text-gray-600 text-xs hover:text-gray-300 transition-colors">Privacidad</Link>
                         <Link href="/legal" className="text-gray-600 text-xs hover:text-gray-300 transition-colors">Aviso legal</Link>
@@ -66,7 +66,7 @@ export default function GuestLayout({ children }) {
                         <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
                             <QrCode size={15} className="text-white" />
                         </div>
-                        <span className="text-base font-bold">Qran</span>
+                        <span className="text-base font-bold uppercase">mqr</span>
                     </Link>
                     {children}
                 </div>

@@ -11,7 +11,7 @@ export default function Privacy() {
                         <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
                             <QrCode size={15} className="text-white" />
                         </div>
-                        <span className="text-sm font-bold">Qran</span>
+                        <span className="text-sm font-bold">MQR</span>
                     </Link>
                     <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black transition-colors">
                         <ArrowLeft size={15} /> Volver
@@ -118,7 +118,7 @@ function Footer() {
     return (
         <footer className="border-t border-gray-100 bg-white mt-8">
             <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p className="text-xs text-gray-400">© {new Date().getFullYear()} Qran — Logan Naranjo Rodríguez</p>
+                <p className="text-xs text-gray-400">© {new Date().getFullYear()} MQR — Logan Naranjo Rodríguez</p>
                 <div className="flex gap-4 text-xs text-gray-400">
                     <Link href="/privacy" className="hover:text-black transition-colors">Privacidad</Link>
                     <Link href="/legal" className="hover:text-black transition-colors">Aviso legal</Link>

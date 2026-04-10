@@ -11,7 +11,7 @@ export default function Welcome() {
                     <div className="w-7 h-7 bg-black rounded-xl flex items-center justify-center">
                         <QrCode size={15} className="text-white" />
                     </div>
-                    <span className="text-base font-bold tracking-tight">Qran</span>
+                    <span className="text-base font-bold tracking-tight">MQR</span>
                 </Link>
                 <div className="flex items-center gap-3">
                     <Link href="/login" className="text-sm text-gray-600 px-4 py-2 rounded-xl border border-gray-200 hover:border-gray-400 hover:text-black bg-white/70 backdrop-blur-sm transition-all duration-200">
@@ -61,7 +61,7 @@ export default function Welcome() {
 
             {/* Footer inside aurora so no overflow */}
             <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-4 z-10 flex-wrap px-6">
-                <p className="text-xs text-gray-400">© {new Date().getFullYear()} Qran</p>
+                <p className="text-xs text-gray-400">© {new Date().getFullYear()} MQR</p>
                 <div className="flex gap-4">
                     <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Privacidad</Link>
                     <Link href="/legal" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Aviso legal</Link>

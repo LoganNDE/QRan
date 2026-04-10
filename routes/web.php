@@ -21,7 +21,7 @@ Route::get('/legal',   fn() => Inertia::render('Legal/LegalNotice'));
 Route::get('/terms',   fn() => Inertia::render('Legal/Terms'));
 
 // QR Redirect (public)
-Route::get('/r/{slug}', [QrController::class, 'redirect'])->middleware('throttle:200,1');
+Route::get('/r/{slug}', [QrController::class, 'redirect'])->middleware('throttle:60,1');
 
 // Auth required routes
 Route::middleware(['auth', 'verified'])->group(function () {

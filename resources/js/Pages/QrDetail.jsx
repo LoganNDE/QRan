@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router, Link } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCodeStyling from 'qr-code-styling';
 import { toast, Toaster } from 'react-hot-toast';
 import ColorPicker from '@/Components/ColorPicker';
@@ -10,52 +10,94 @@ import {
 } from 'recharts';
 import {
     ArrowLeft, Copy, Download, ScanLine, Link2, Hash,
-    Pencil, X, Save, Loader2, ToggleLeft, ToggleRight, Palette
+    Pencil, X, Save, Loader2, ToggleLeft, ToggleRight, Palette,
+    Globe, User, Wifi
 } from 'lucide-react';
-
-function validate(data) {
-    const errs = {};
-    if (!data.name.trim()) errs.name = 'El nombre es obligatorio.';
-    else if (data.name.trim().length > 100) errs.name = 'Máximo 100 caracteres.';
-    if (!data.destination_url.trim()) {
-        errs.destination_url = 'La URL es obligatoria.';
-    } else {
-        try { new URL(data.destination_url); }
-        catch { errs.destination_url = 'Introduce una URL válida (ej: https://ejemplo.com).'; }
-    }
-    return errs;
-}
 
 const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB'];
 const PREVIEW_SIZE = 220;
 
+const TYPE_META = {
+    url:   { icon: Globe, label: 'URL',   color: 'text-blue-600 bg-blue-50 border-blue-100' },
+    vcard: { icon: User,  label: 'vCard', color: 'text-purple-600 bg-purple-50 border-purple-100' },
+    wifi:  { icon: Wifi,  label: 'WiFi',  color: 'text-green-600 bg-green-50 border-green-100' },
+};
+
+function buildWifi(d) {
+    const esc = s => String(s || '').replace(/([\\;,":])/, '\\$1');
+    return `WIFI:T:${d.wifi_security || 'WPA'};S:${esc(d.wifi_ssid)};P:${esc(d.wifi_password)};H:${d.wifi_hidden ? 'true' : 'false'};;`;
+}
+
+function validateByType(data, type) {
+    const errs = {};
+    if (!data.name.trim()) errs.name = 'El nombre es obligatorio.';
+    else if (data.name.trim().length > 100) errs.name = 'Máximo 100 caracteres.';
+
+    if (type === 'url') {
+        if (!data.destination_url.trim()) {
+            errs.destination_url = 'La URL es obligatoria.';
+        } else {
+            try { new URL(data.destination_url); }
+            catch { errs.destination_url = 'Introduce una URL válida (ej: https://ejemplo.com).'; }
+        }
+    } else if (type === 'vcard') {
+        if (!data.vc_first_name.trim()) errs.vc_first_name = 'El nombre es obligatorio.';
+    } else if (type === 'wifi') {
+        if (!data.wifi_ssid.trim()) errs.wifi_ssid = 'El nombre de la red es obligatorio.';
+    }
+    return errs;
+}
+
 export default function QrDetail({ qr, stats }) {
-    const qrRef = useRef(null);
+    const qrRef      = useRef(null);
     const qrInstance = useRef(null);
-    const [editing, setEditing] = useState(false);
+    const [editing, setEditing]           = useState(false);
     const [clientErrors, setClientErrors] = useState({});
-    const [touched, setTouched] = useState({});
+    const [touched, setTouched]           = useState({});
 
     const { data, setData, put, processing, errors } = useForm({
-        name: qr.name,
-        destination_url: qr.destination_url,
-        fg_color: qr.fg_color,
-        bg_color: qr.bg_color,
-        dot_style: qr.dot_style,
-        corner_style: qr.corner_style,
-        qr_size: qr.qr_size,
+        name:             qr.name,
+        destination_url:  qr.destination_url,
+        // vCard
+        vc_first_name: qr.meta?.vc_first_name ?? '',
+        vc_last_name:  qr.meta?.vc_last_name  ?? '',
+        vc_phone:      qr.meta?.vc_phone      ?? '',
+        vc_email:      qr.meta?.vc_email      ?? '',
+        vc_company:    qr.meta?.vc_company    ?? '',
+        vc_website:    qr.meta?.vc_website    ?? '',
+        vc_address:    qr.meta?.vc_address    ?? '',
+        // WiFi
+        wifi_ssid:     qr.meta?.wifi_ssid     ?? '',
+        wifi_password: qr.meta?.wifi_password ?? '',
+        wifi_security: qr.meta?.wifi_security ?? 'WPA',
+        wifi_hidden:   qr.meta?.wifi_hidden   ?? false,
+        // Design
+        fg_color:         qr.fg_color,
+        bg_color:         qr.bg_color,
+        dot_style:        qr.dot_style,
+        corner_style:     qr.corner_style,
+        qr_size:          qr.qr_size,
         error_correction: qr.error_correction,
     });
 
     const redirectUrl = `${window.location.origin}/r/${qr.slug}`;
 
+    // WiFi QRs encode data directly; URL/vCard use the redirect slug
+    const qrPreviewData = useMemo(() => {
+        if (qr.qr_type === 'wifi') return buildWifi(data);
+        return redirectUrl;
+    }, [
+        qr.qr_type, redirectUrl,
+        data.wifi_ssid, data.wifi_password, data.wifi_security, data.wifi_hidden,
+    ]);
+
     useEffect(() => {
         qrInstance.current = new QRCodeStyling({
             width: qr.qr_size, height: qr.qr_size,
-            data: redirectUrl,
-            dotsOptions: { color: qr.fg_color, type: qr.dot_style },
+            data: qrPreviewData,
+            dotsOptions:          { color: qr.fg_color,    type: qr.dot_style },
             cornersSquareOptions: { type: qr.corner_style },
-            backgroundOptions: { color: qr.bg_color },
+            backgroundOptions:    { color: qr.bg_color },
         });
         if (qrRef.current) {
             qrRef.current.innerHTML = '';
@@ -64,21 +106,19 @@ export default function QrDetail({ qr, stats }) {
     }, []);
 
     useEffect(() => {
-        if (qrInstance.current) {
-            qrInstance.current.update({
-                dotsOptions: { color: data.fg_color, type: data.dot_style },
-                cornersSquareOptions: { type: data.corner_style },
-                backgroundOptions: { color: data.bg_color },
-                width: data.qr_size,
-                height: data.qr_size,
-            });
-        }
-    }, [data]);
+        qrInstance.current?.update({
+            data:                 qrPreviewData,
+            dotsOptions:          { color: data.fg_color,    type: data.dot_style },
+            cornersSquareOptions: { type: data.corner_style },
+            backgroundOptions:    { color: data.bg_color },
+            width:  data.qr_size,
+            height: data.qr_size,
+        });
+    }, [qrPreviewData, data.fg_color, data.bg_color, data.dot_style, data.corner_style, data.qr_size]);
 
-    // Re-validate touched fields on change
     useEffect(() => {
         if (Object.keys(touched).length > 0) {
-            const errs = validate(data);
+            const errs = validateByType(data, qr.qr_type);
             const visible = {};
             Object.keys(touched).forEach(k => { if (errs[k]) visible[k] = errs[k]; });
             setClientErrors(visible);
@@ -86,38 +126,51 @@ export default function QrDetail({ qr, stats }) {
     }, [data]);
 
     const touch = (field) => setTouched(t => ({ ...t, [field]: true }));
-
-    const save = (e) => {
-        e.preventDefault();
-        const errs = validate(data);
-        if (Object.keys(errs).length > 0) {
-            setClientErrors(errs);
-            setTouched({ name: true, destination_url: true });
-            toast.error('Corrige los errores antes de guardar.');
-            return;
-        }
-        put(route('qr.update', qr.id), {
-            onSuccess: () => { toast.success('QR actualizado'); setEditing(false); setClientErrors({}); setTouched({}); },
-            onError: () => toast.error('Error al actualizar'),
-        });
-    };
-
-    const copy = () => navigator.clipboard.writeText(redirectUrl).then(() => toast.success('URL copiada'));
-    const download = (ext) => qrInstance.current?.download({ name: qr.name, extension: ext });
-    const toggle = () => {
-        router.patch(route('qr.toggle', qr.id), {}, {
-            onSuccess: () => toast.success(qr.is_active ? 'QR desactivado' : 'QR activado'),
-        });
-    };
-
-    const scale = data.qr_size <= PREVIEW_SIZE ? 1 : PREVIEW_SIZE / data.qr_size;
-
     const allErrors = { ...errors, ...clientErrors };
+    const scale = data.qr_size <= PREVIEW_SIZE ? 1 : PREVIEW_SIZE / data.qr_size;
 
     const inputClass = (field) =>
         `w-full px-3.5 py-2.5 text-sm bg-white border rounded-xl outline-none transition-all duration-200
         focus:ring-2 focus:ring-black/10 focus:border-black/30 hover:border-gray-300
         ${allErrors[field] ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
+
+    const save = (e) => {
+        e.preventDefault();
+        const errs = validateByType(data, qr.qr_type);
+        if (Object.keys(errs).length > 0) {
+            setClientErrors(errs);
+            const t = {};
+            Object.keys(errs).forEach(k => t[k] = true);
+            setTouched(t);
+            toast.error('Corrige los errores antes de guardar.');
+            return;
+        }
+        put(route('qr.update', qr.id), {
+            onSuccess: () => { toast.success('QR actualizado'); setEditing(false); setClientErrors({}); setTouched({}); },
+            onError:   () => toast.error('Error al actualizar'),
+        });
+    };
+
+    const copy     = () => navigator.clipboard.writeText(redirectUrl).then(() => toast.success('URL copiada'));
+    const download = (ext) => qrInstance.current?.download({ name: qr.name, extension: ext });
+    const toggle   = () => {
+        router.patch(route('qr.toggle', qr.id), {}, {
+            onSuccess: () => toast.success(qr.is_active ? 'QR desactivado' : 'QR activado'),
+        });
+    };
+
+    const typeInfo = TYPE_META[qr.qr_type] ?? TYPE_META.url;
+    const TypeIcon = typeInfo.icon;
+
+    // Human-readable content summary for the info card
+    const contentSummary = () => {
+        if (qr.qr_type === 'vcard') {
+            const name = [qr.meta?.vc_first_name, qr.meta?.vc_last_name].filter(Boolean).join(' ');
+            return name || '—';
+        }
+        if (qr.qr_type === 'wifi') return qr.meta?.wifi_ssid || '—';
+        return qr.destination_url;
+    };
 
     return (
         <AuthenticatedLayout>
@@ -137,6 +190,10 @@ export default function QrDetail({ qr, stats }) {
                             <span className="hidden sm:inline">Volver</span>
                         </Link>
                         <span className="text-gray-200">/</span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-lg border ${typeInfo.color}`}>
+                            <TypeIcon size={11} />
+                            {typeInfo.label}
+                        </span>
                         <h1 className="text-lg font-bold text-gray-900 truncate">{qr.name}</h1>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -172,7 +229,6 @@ export default function QrDetail({ qr, stats }) {
                             animate-in fade-in slide-in-from-bottom-3 duration-500"
                         style={{ animationDelay: '60ms', animationFillMode: 'backwards' }}
                     >
-                        {/* QR preview — overflow fix */}
                         <div
                             className="relative rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center"
                             style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
@@ -181,26 +237,29 @@ export default function QrDetail({ qr, stats }) {
                                 ref={qrRef}
                                 style={{
                                     position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
+                                    top: '50%', left: '50%',
                                     transform: `translate(-50%, -50%) scale(${scale})`,
                                     transformOrigin: 'center center',
                                 }}
                             />
                         </div>
 
-                        {/* Redirect URL */}
-                        <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2 overflow-hidden">
-                            <span className="text-xs text-gray-500 truncate font-mono min-w-0">{redirectUrl}</span>
-                            <button onClick={copy} className="text-gray-400 hover:text-black transition-colors flex-shrink-0">
-                                <Copy size={14} />
-                            </button>
-                        </div>
+                        {/* Redirect URL (only for url/vcard types) */}
+                        {qr.qr_type !== 'wifi' && (
+                            <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2 overflow-hidden">
+                                <span className="text-xs text-gray-500 truncate font-mono min-w-0">{redirectUrl}</span>
+                                <button onClick={copy} className="text-gray-400 hover:text-black transition-colors flex-shrink-0">
+                                    <Copy size={14} />
+                                </button>
+                            </div>
+                        )}
 
                         <div className="flex gap-2 w-full">
-                            <button onClick={copy} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 text-gray-700 py-2 rounded-xl text-xs hover:bg-gray-50 hover:border-gray-300 transition-all">
-                                <Copy size={13} /> Copiar
-                            </button>
+                            {qr.qr_type !== 'wifi' && (
+                                <button onClick={copy} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 text-gray-700 py-2 rounded-xl text-xs hover:bg-gray-50 hover:border-gray-300 transition-all">
+                                    <Copy size={13} /> Copiar
+                                </button>
+                            )}
                             <button onClick={() => download('png')} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 text-gray-700 py-2 rounded-xl text-xs hover:bg-gray-50 hover:border-gray-300 transition-all">
                                 <Download size={13} /> PNG
                             </button>
@@ -220,14 +279,19 @@ export default function QrDetail({ qr, stats }) {
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <ScanLine size={13} /> Total escaneos
                             </div>
-                            <p className="text-3xl font-bold text-gray-900 tabular-nums break-all">{(qr.scans_count ?? 0).toLocaleString()}</p>
+                            <p className="text-3xl font-bold text-gray-900 tabular-nums">{(qr.scans_count ?? 0).toLocaleString()}</p>
                         </div>
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-2 flex flex-col gap-1">
+
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-2 flex flex-col gap-1 min-w-0">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
-                                <Link2 size={13} /> URL destino
+                                <TypeIcon size={13} />
+                                {qr.qr_type === 'url'   && 'URL destino'}
+                                {qr.qr_type === 'vcard' && 'Contacto'}
+                                {qr.qr_type === 'wifi'  && 'Red WiFi'}
                             </div>
-                            <p className="text-sm font-medium text-gray-800 truncate">{qr.destination_url}</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">{contentSummary()}</p>
                         </div>
+
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-3 flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <Hash size={13} /> Slug de redirección
@@ -248,31 +312,89 @@ export default function QrDetail({ qr, stats }) {
                             <Palette size={15} className="text-gray-400" />
                             <h3 className="text-sm font-semibold text-gray-900">Editar QR</h3>
                         </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
+                            {/* Nombre siempre */}
+                            <div className={qr.qr_type === 'url' ? '' : 'sm:col-span-2'}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
-                                <input
-                                    value={data.name}
-                                    onChange={e => setData('name', e.target.value)}
-                                    onBlur={() => touch('name')}
-                                    className={inputClass('name')}
-                                />
-                                {allErrors.name && (
-                                    <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.name}</p>
-                                )}
+                                <input value={data.name} onChange={e => setData('name', e.target.value)} onBlur={() => touch('name')} className={inputClass('name')} />
+                                {allErrors.name && <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.name}</p>}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">URL destino</label>
-                                <input
-                                    value={data.destination_url}
-                                    onChange={e => setData('destination_url', e.target.value)}
-                                    onBlur={() => touch('destination_url')}
-                                    className={inputClass('destination_url')}
-                                />
-                                {allErrors.destination_url && (
-                                    <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.destination_url}</p>
-                                )}
-                            </div>
+
+                            {/* URL destino */}
+                            {qr.qr_type === 'url' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">URL destino</label>
+                                    <input value={data.destination_url} onChange={e => setData('destination_url', e.target.value)} onBlur={() => touch('destination_url')} className={inputClass('destination_url')} />
+                                    {allErrors.destination_url && <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.destination_url}</p>}
+                                </div>
+                            )}
+
+                            {/* vCard fields */}
+                            {qr.qr_type === 'vcard' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+                                        <input value={data.vc_first_name} onChange={e => setData('vc_first_name', e.target.value)} onBlur={() => touch('vc_first_name')} className={inputClass('vc_first_name')} placeholder="Ana" />
+                                        {allErrors.vc_first_name && <p className="text-red-500 text-xs mt-1">{allErrors.vc_first_name}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Apellidos</label>
+                                        <input value={data.vc_last_name} onChange={e => setData('vc_last_name', e.target.value)} className={inputClass(false)} placeholder="García López" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
+                                        <input value={data.vc_phone} onChange={e => setData('vc_phone', e.target.value)} className={inputClass(false)} placeholder="+34 600 000 000" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                                        <input type="email" value={data.vc_email} onChange={e => setData('vc_email', e.target.value)} className={inputClass(false)} placeholder="ana@empresa.com" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Empresa</label>
+                                        <input value={data.vc_company} onChange={e => setData('vc_company', e.target.value)} className={inputClass(false)} placeholder="Empresa S.L." />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Sitio web</label>
+                                        <input value={data.vc_website} onChange={e => setData('vc_website', e.target.value)} className={inputClass(false)} placeholder="https://empresa.com" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
+                                        <input value={data.vc_address} onChange={e => setData('vc_address', e.target.value)} className={inputClass(false)} placeholder="Calle Mayor 1, 28001 Madrid" />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* WiFi fields */}
+                            {qr.qr_type === 'wifi' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Nombre de la red (SSID) *</label>
+                                        <input value={data.wifi_ssid} onChange={e => setData('wifi_ssid', e.target.value)} onBlur={() => touch('wifi_ssid')} className={inputClass('wifi_ssid')} placeholder="MiRedWiFi" />
+                                        {allErrors.wifi_ssid && <p className="text-red-500 text-xs mt-1">{allErrors.wifi_ssid}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
+                                        <input type="password" value={data.wifi_password} onChange={e => setData('wifi_password', e.target.value)} className={inputClass(false)} placeholder="••••••••" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Seguridad</label>
+                                        <select value={data.wifi_security} onChange={e => setData('wifi_security', e.target.value)} className={inputClass(false)}>
+                                            <option value="WPA">WPA / WPA2</option>
+                                            <option value="WEP">WEP</option>
+                                            <option value="nopass">Sin contraseña</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center pt-5">
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input type="checkbox" checked={data.wifi_hidden} onChange={e => setData('wifi_hidden', e.target.checked)} className="w-4 h-4 rounded border-gray-300 accent-black" />
+                                            <span className="text-sm text-gray-600">Red oculta</span>
+                                        </label>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Design — always */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Color principal</label>
                                 <ColorPicker label="Color principal" value={data.fg_color} onChange={v => setData('fg_color', v)} />
@@ -299,6 +421,7 @@ export default function QrDetail({ qr, stats }) {
                                     <option value="dot">Punto</option>
                                 </select>
                             </div>
+
                             <div className="sm:col-span-2 flex gap-3 pt-2">
                                 <button
                                     type="submit"

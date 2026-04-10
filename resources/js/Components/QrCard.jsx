@@ -1,20 +1,43 @@
 import { Link } from '@inertiajs/react';
-import { QrCode, ScanLine, Trash2, ExternalLink, Calendar } from 'lucide-react';
+import { QrCode, ScanLine, Trash2, ExternalLink, Calendar, Globe, User, Wifi } from 'lucide-react';
+
+const TYPE_ICON  = { url: Globe, vcard: User, wifi: Wifi };
+const TYPE_LABEL = { url: 'URL', vcard: 'vCard', wifi: 'WiFi' };
+const TYPE_COLOR = {
+    url:   'text-blue-500 bg-blue-50',
+    vcard: 'text-purple-500 bg-purple-50',
+    wifi:  'text-green-500 bg-green-50',
+};
+
+function cardSubtitle(qr) {
+    if (qr.qr_type === 'vcard') {
+        const name = [qr.meta?.vc_first_name, qr.meta?.vc_last_name].filter(Boolean).join(' ');
+        return name || 'vCard';
+    }
+    if (qr.qr_type === 'wifi') return qr.meta?.wifi_ssid || 'WiFi';
+    return qr.destination_url;
+}
 
 export default function QrCard({ qr, onToggle, onDelete }) {
-    const lastScan = qr.last_scan ? new Date(qr.last_scan).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : null;
+    const lastScan  = qr.last_scan ? new Date(qr.last_scan).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : null;
+    const type      = qr.qr_type ?? 'url';
+    const TypeIcon  = TYPE_ICON[type]  ?? Globe;
+    const typeColor = TYPE_COLOR[type] ?? TYPE_COLOR.url;
 
     return (
         <div className="group bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col gap-4 hover:shadow-md hover:border-gray-200 transition-all duration-200">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-gray-100 transition-colors">
-                        <QrCode size={18} className="text-gray-400" />
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${typeColor}`}>
+                        <TypeIcon size={17} />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate text-sm leading-tight">{qr.name}</h3>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">{qr.destination_url}</p>
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="font-semibold text-gray-900 truncate text-sm leading-tight">{qr.name}</h3>
+                            <span className="text-[10px] font-medium text-gray-400 flex-shrink-0">{TYPE_LABEL[type]}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{cardSubtitle(qr)}</p>
                     </div>
                 </div>
 

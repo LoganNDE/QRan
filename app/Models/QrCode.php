@@ -9,13 +9,14 @@ class QrCode extends Model
     use HasUuids;
 
     protected $fillable = [
-        'user_id', 'name', 'slug', 'destination_url', 'is_active',
+        'user_id', 'name', 'slug', 'qr_type', 'meta', 'destination_url', 'is_active',
         'fg_color', 'bg_color', 'dot_style', 'corner_style',
         'logo_url', 'logo_size', 'qr_size', 'error_correction',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'meta'      => 'array',
     ];
 
     public function user()

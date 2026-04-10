@@ -23,7 +23,7 @@ export default function AuthenticatedLayout({ children, header }) {
                             <div className="w-7 h-7 bg-black rounded-xl flex items-center justify-center">
                                 <QrCode size={15} className="text-white" />
                             </div>
-                            <span className="text-sm font-bold tracking-tight hidden sm:block">Qran</span>
+                            <span className="text-sm font-bold tracking-tight hidden sm:block uppercase">mqr</span>
                         </Link>
 
                         {/* Right */}
@@ -120,7 +120,7 @@ export default function AuthenticatedLayout({ children, header }) {
 
             <footer className="border-t border-gray-100 mt-auto">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
-                    <p className="text-xs text-gray-400">© {new Date().getFullYear()} Qran — Logan Naranjo Rodríguez</p>
+                    <p className="text-xs text-gray-400">© {new Date().getFullYear()} MQR — Logan Naranjo Rodríguez</p>
                     <div className="flex gap-4 text-xs text-gray-400">
                         <Link href="/privacy" className="hover:text-black transition-colors">Privacidad</Link>
                         <Link href="/legal" className="hover:text-black transition-colors">Aviso legal</Link>
