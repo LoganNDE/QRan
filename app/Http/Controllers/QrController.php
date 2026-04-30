@@ -312,6 +312,19 @@ class QrController extends Controller
             ]);
         }
 
+        if ($qr->qr_type === 'pdf') {
+            // Serve the PDF through Laravel to avoid web-server permission issues (403)
+            $rel = ltrim(str_replace('/storage/', '', parse_url($qr->destination_url, PHP_URL_PATH)), '/');
+            if (!Storage::disk('public')->exists($rel)) {
+                abort(404);
+            }
+            $originalName = $qr->meta['pdf_name'] ?? basename($rel);
+            return Storage::disk('public')->response($rel, $originalName, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $originalName . '"',
+            ]);
+        }
+
         return redirect($qr->destination_url, 302);
     }
 
