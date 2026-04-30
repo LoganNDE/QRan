@@ -18,6 +18,8 @@ export default function Dashboard({ qrs = [] }) {
             ? [q.meta?.vc_first_name, q.meta?.vc_last_name, q.meta?.vc_email, q.meta?.vc_company].filter(Boolean).join(' ')
             : q.qr_type === 'wifi'
             ? (q.meta?.wifi_ssid ?? '')
+            : q.qr_type === 'pdf'
+            ? (q.meta?.pdf_name ?? '')
             : q.destination_url;
         return q.name.toLowerCase().includes(s) || subtitle.toLowerCase().includes(s);
     });

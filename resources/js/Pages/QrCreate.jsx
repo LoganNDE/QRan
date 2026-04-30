@@ -1,17 +1,18 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCodeStyling from 'qr-code-styling';
 import { toast, Toaster } from 'react-hot-toast';
 import ColorPicker from '@/Components/ColorPicker';
-import { Link2, Tag, Palette, Loader2, Download, ArrowRight, User, Wifi, Globe } from 'lucide-react';
+import { Link2, Tag, Palette, Loader2, Download, ArrowRight, User, Wifi, Globe, ImagePlus, Trash2, FileText } from 'lucide-react';
 
 const PREVIEW_SIZE = 250;
 
 const TYPE_OPTIONS = [
-    { value: 'url',   label: 'URL',   icon: Globe, desc: 'Enlace web dinámico' },
-    { value: 'vcard', label: 'vCard', icon: User,  desc: 'Tarjeta de contacto' },
-    { value: 'wifi',  label: 'WiFi',  icon: Wifi,  desc: 'Red inalámbrica' },
+    { value: 'url',   label: 'URL',   icon: Globe,    desc: 'Enlace web dinámico' },
+    { value: 'pdf',   label: 'PDF',   icon: FileText, desc: 'Documento PDF dinámico' },
+    { value: 'vcard', label: 'vCard', icon: User,     desc: 'Tarjeta de contacto' },
+    { value: 'wifi',  label: 'WiFi',  icon: Wifi,     desc: 'Red inalámbrica' },
 ];
 
 function buildVCard(d) {
@@ -47,14 +48,20 @@ function validateByType(data) {
     } else if (data.qr_type === 'wifi') {
         if (!data.wifi_ssid.trim()) errs.wifi_ssid = 'El nombre de la red es obligatorio.';
     }
+    // PDF check is passed separately (pdfFile state)
     return errs;
 }
 
 export default function QrCreate() {
     const qrRef      = useRef(null);
     const qrInstance = useRef(null);
+    const logoInputRef = useRef(null);
     const [clientErrors, setClientErrors] = useState({});
     const [touched, setTouched]           = useState({});
+    const [logoFile, setLogoFile]         = useState(null);
+    const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
+    const [pdfFile, setPdfFile]           = useState(null);
+    const pdfInputRef = useRef(null);
 
     const { data, setData, post, processing, errors } = useForm({
         name: '',
@@ -70,11 +77,13 @@ export default function QrCreate() {
         fg_color: '#000000', bg_color: '#FFFFFF',
         dot_style: 'square', corner_style: 'square',
         qr_size: 300, error_correction: 'M',
+        logo_size: 30,
     });
 
     const qrPreviewData = useMemo(() => {
         if (data.qr_type === 'url')   return data.destination_url || 'https://example.com';
         if (data.qr_type === 'vcard') return buildVCard(data);
+        if (data.qr_type === 'pdf')   return `${window.location.origin}/r/preview`;
         return buildWifi(data);
     }, [
         data.qr_type, data.destination_url,
@@ -101,13 +110,15 @@ export default function QrCreate() {
     useEffect(() => {
         qrInstance.current?.update({
             data: qrPreviewData,
+            image: logoPreviewUrl || undefined,
             dotsOptions:          { color: data.fg_color,    type: data.dot_style },
             cornersSquareOptions: { type: data.corner_style },
             backgroundOptions:    { color: data.bg_color },
+            imageOptions:         { crossOrigin: 'anonymous', margin: 4, imageSize: data.logo_size / 100 },
             width:  data.qr_size,
             height: data.qr_size,
         });
-    }, [qrPreviewData, data.fg_color, data.bg_color, data.dot_style, data.corner_style, data.qr_size]);
+    }, [qrPreviewData, data.fg_color, data.bg_color, data.dot_style, data.corner_style, data.qr_size, logoPreviewUrl, data.logo_size]);
 
     useEffect(() => {
         if (Object.keys(touched).length > 0) {
@@ -138,7 +149,48 @@ export default function QrCreate() {
             toast.error('Corrige los errores antes de continuar.');
             return;
         }
-        post(route('qr.store'), { onError: () => toast.error('Error al crear el QR.') });
+
+        if (data.qr_type === 'pdf' && !pdfFile) {
+            toast.error('Selecciona un archivo PDF.');
+            return;
+        }
+
+        const onError = (errs) => {
+            const first = Object.values(errs)[0];
+            toast.error(first || 'Error al crear el QR.', { duration: 6000 });
+            console.error('[QrCreate] Errores del servidor:', errs);
+        };
+
+        if (logoFile || pdfFile) {
+            // Build FormData manually so booleans are properly serialized
+            const fd = new FormData();
+            Object.entries(data).forEach(([key, val]) => {
+                if (val === null || val === undefined) return;
+                if (typeof val === 'boolean') {
+                    fd.append(key, val ? '1' : '0');
+                } else {
+                    fd.append(key, val);
+                }
+            });
+            if (logoFile) fd.append('logo', logoFile);
+            if (pdfFile)  fd.append('pdf_file', pdfFile);
+            router.post(route('qr.store'), fd, { onError });
+        } else {
+            post(route('qr.store'), { onError });
+        }
+    };
+
+    const handleLogoFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setLogoFile(file);
+        setLogoPreviewUrl(URL.createObjectURL(file));
+    };
+
+    const removeLogo = () => {
+        setLogoFile(null);
+        setLogoPreviewUrl(null);
+        if (logoInputRef.current) logoInputRef.current.value = '';
     };
 
     const download = (ext) => qrInstance.current?.download({ name: data.name || 'qr', extension: ext });
@@ -163,7 +215,7 @@ export default function QrCreate() {
                         {/* ── Tipo de QR ── */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                             <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de QR</label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {TYPE_OPTIONS.map(({ value, label, icon: Icon, desc }) => (
                                     <button
                                         key={value}
@@ -209,7 +261,13 @@ export default function QrCreate() {
                                     <input
                                         value={data.destination_url}
                                         onChange={e => setData('destination_url', e.target.value)}
-                                        onBlur={() => touch('destination_url')}
+                                        onBlur={() => {
+                                            touch('destination_url');
+                                            const val = data.destination_url.trim();
+                                            if (val && !val.match(/^https?:\/\//i)) {
+                                                setData('destination_url', 'https://' + val);
+                                            }
+                                        }}
                                         className={inputClass('destination_url')}
                                         placeholder="https://tutienda.com"
                                     />
@@ -289,6 +347,33 @@ export default function QrCreate() {
                                     <p className="text-xs text-gray-400">El QR codifica los datos WiFi directamente. Si cambias la contraseña, re-descarga el QR.</p>
                                 </div>
                             )}
+
+                            {/* PDF */}
+                            {data.qr_type === 'pdf' && (
+                                <div className="space-y-3">
+                                    <input ref={pdfInputRef} type="file" accept="application/pdf" onChange={e => setPdfFile(e.target.files[0] || null)} className="hidden" />
+                                    <button
+                                        type="button"
+                                        onClick={() => pdfInputRef.current?.click()}
+                                        className={`flex items-center gap-2 w-full px-3.5 py-3 border-2 border-dashed rounded-xl text-sm transition-all ${
+                                            pdfFile ? 'border-black/20 bg-gray-50 text-gray-800' : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        <FileText size={16} className="flex-shrink-0" />
+                                        <span className="truncate">{pdfFile ? pdfFile.name : 'Seleccionar archivo PDF *'}</span>
+                                        {pdfFile && (
+                                            <button
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); setPdfFile(null); if (pdfInputRef.current) pdfInputRef.current.value = ''; }}
+                                                className="ml-auto text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </button>
+                                    <p className="text-xs text-gray-400">El PDF se aloja en el servidor. Puedes reemplazarlo en cualquier momento sin cambiar el QR. Máximo 5 MB.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Diseño ── */}
@@ -341,6 +426,45 @@ export default function QrCreate() {
                                     <option value="Q">Q — Alta (25%)</option>
                                     <option value="H">H — Máxima (30%)</option>
                                 </select>
+                            </div>
+
+                            {/* Logo */}
+                            <div className="border-t border-gray-100 pt-4 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <ImagePlus size={13} className="text-gray-400" />
+                                    <span className="text-xs font-medium text-gray-600">Logo central <span className="text-gray-400">(opcional)</span></span>
+                                </div>
+                                <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" onChange={handleLogoFile} className="hidden" />
+                                {logoPreviewUrl ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl border border-gray-200 overflow-hidden bg-gray-50 flex-shrink-0">
+                                            <img src={logoPreviewUrl} alt="Logo" className="w-full h-full object-contain p-0.5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-gray-600 truncate">{logoFile?.name}</p>
+                                            <button type="button" onClick={removeLogo} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 mt-0.5">
+                                                <Trash2 size={11} /> Quitar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => logoInputRef.current?.click()}
+                                        className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-all w-full justify-center"
+                                    >
+                                        <ImagePlus size={13} /> Seleccionar imagen
+                                    </button>
+                                )}
+                                {logoPreviewUrl && (
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs text-gray-500">Tamaño del logo</span>
+                                            <span className="text-xs font-mono text-gray-400">{data.logo_size}%</span>
+                                        </div>
+                                        <input type="range" min="10" max="50" step="5" value={data.logo_size} onChange={e => setData('logo_size', parseInt(e.target.value))} className="w-full accent-black" />
+                                    </div>
+                                )}
                             </div>
                         </div>
 

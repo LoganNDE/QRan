@@ -5,6 +5,7 @@ use App\Models\QrCode;
 use App\Models\QrScan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -50,7 +51,7 @@ class QrController extends Controller
 
         $base = $request->validate([
             'name'             => 'required|string|max:100',
-            'qr_type'          => 'required|in:url,vcard,wifi',
+            'qr_type'          => 'required|in:url,vcard,wifi,pdf',
             'fg_color'         => ['sometimes', 'string', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
             'bg_color'         => ['sometimes', 'string', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
             'dot_style'        => 'sometimes|string|in:square,rounded,dots,classy,classy-rounded,extra-rounded',
@@ -82,6 +83,10 @@ class QrController extends Controller
             $base['destination_url'] = $this->buildVCard($meta);
 
         } elseif ($type === 'wifi') {
+            // Normalize wifi_hidden: FormData sends booleans as strings ("false"/"true")
+            if ($request->has('wifi_hidden')) {
+                $request->merge(['wifi_hidden' => filter_var($request->input('wifi_hidden'), FILTER_VALIDATE_BOOLEAN)]);
+            }
             $request->validate([
                 'wifi_ssid'     => 'required|string|max:100',
                 'wifi_password' => 'sometimes|nullable|string|max:100',
@@ -90,6 +95,14 @@ class QrController extends Controller
             ]);
             $meta = $request->only(['wifi_ssid','wifi_password','wifi_security','wifi_hidden']);
             $base['destination_url'] = $this->buildWifi($meta);
+
+        } elseif ($type === 'pdf') {
+            $request->validate([
+                'pdf_file' => 'required|file|mimes:pdf|max:5120',
+            ]);
+            $path = $request->file('pdf_file')->store('pdfs', 'public');
+            $base['destination_url'] = Storage::url($path);
+            $meta = ['pdf_name' => $request->file('pdf_file')->getClientOriginalName()];
         }
 
         $base['user_id'] = $user->id;
@@ -100,6 +113,15 @@ class QrController extends Controller
         }
 
         $qr = QrCode::create($base);
+
+        if ($request->hasFile('logo')) {
+            $request->validate(['logo' => 'image|mimes:jpeg,png,jpg,gif,webp|max:1024']);
+            $path = $request->file('logo')->store('logos', 'public');
+            $qr->update([
+                'logo_url'  => Storage::url($path),
+                'logo_size' => (int) $request->input('logo_size', 30),
+            ]);
+        }
 
         return redirect()->route('qr.show', $qr->id)->with('success', 'QR creado exitosamente');
     }
@@ -137,12 +159,47 @@ class QrController extends Controller
             ->limit(5)
             ->get();
 
+        $browsers = (clone $scansQuery)
+            ->selectRaw("browser, COUNT(*) as count")
+            ->whereNotNull('browser')
+            ->groupBy('browser')
+            ->orderByDesc('count')
+            ->get();
+
+        $osBreakdown = (clone $scansQuery)
+            ->selectRaw("os, COUNT(*) as count")
+            ->whereNotNull('os')
+            ->groupBy('os')
+            ->orderByDesc('count')
+            ->get();
+
+        $cities = (clone $scansQuery)
+            ->selectRaw("city, COUNT(*) as count")
+            ->whereNotNull('city')
+            ->groupBy('city')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->get();
+
+        $todayCount = (clone $scansQuery)
+            ->whereDate('scanned_at', today())
+            ->count();
+
+        $weekCount = (clone $scansQuery)
+            ->where('scanned_at', '>=', now()->startOfWeek())
+            ->count();
+
         return Inertia::render('QrDetail', [
             'qr'    => $qr,
             'stats' => [
                 'timeline'  => $timeline,
                 'devices'   => $devices,
                 'countries' => $countries,
+                'browsers'  => $browsers,
+                'os'        => $osBreakdown,
+                'cities'    => $cities,
+                'today'     => $todayCount,
+                'week'      => $weekCount,
             ],
         ]);
     }
@@ -187,6 +244,9 @@ class QrController extends Controller
             $base['meta'] = $meta;
 
         } elseif ($type === 'wifi') {
+            if ($request->has('wifi_hidden')) {
+                $request->merge(['wifi_hidden' => filter_var($request->input('wifi_hidden'), FILTER_VALIDATE_BOOLEAN)]);
+            }
             $request->validate([
                 'wifi_ssid'     => 'required|string|max:100',
                 'wifi_password' => 'sometimes|nullable|string|max:100',
@@ -256,6 +316,66 @@ class QrController extends Controller
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    public function uploadLogo(Request $request, string $id)
+    {
+        $qr = QrCode::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+
+        $request->validate([
+            'logo'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:1024',
+            'logo_size' => 'sometimes|integer|min:10|max:50',
+        ]);
+
+        $updates = ['logo_size' => (int) $request->input('logo_size', $qr->logo_size ?? 30)];
+
+        if ($request->hasFile('logo')) {
+            if ($qr->logo_url) {
+                $rel = ltrim(str_replace('/storage', '', $qr->logo_url), '/');
+                Storage::disk('public')->delete($rel);
+            }
+            $path = $request->file('logo')->store('logos', 'public');
+            $updates['logo_url'] = Storage::url($path);
+        }
+
+        $qr->update($updates);
+
+        return back()->with('success', 'Logo actualizado');
+    }
+
+    public function removeLogo(string $id)
+    {
+        $qr = QrCode::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+
+        if ($qr->logo_url) {
+            $rel = ltrim(str_replace('/storage', '', $qr->logo_url), '/');
+            Storage::disk('public')->delete($rel);
+        }
+
+        $qr->update(['logo_url' => null, 'logo_size' => 30]);
+
+        return back()->with('success', 'Logo eliminado');
+    }
+
+    public function uploadPdf(Request $request, string $id)
+    {
+        $qr = QrCode::where('id', $id)->where('user_id', auth()->id())->where('qr_type', 'pdf')->firstOrFail();
+
+        $request->validate(['pdf_file' => 'required|file|mimes:pdf|max:5120']);
+
+        // Delete old PDF
+        if ($qr->destination_url && str_contains($qr->destination_url, '/storage/pdfs/')) {
+            $rel = ltrim(str_replace('/storage', '', $qr->destination_url), '/');
+            Storage::disk('public')->delete($rel);
+        }
+
+        $path = $request->file('pdf_file')->store('pdfs', 'public');
+        $qr->update([
+            'destination_url' => Storage::url($path),
+            'meta' => array_merge($qr->meta ?? [], ['pdf_name' => $request->file('pdf_file')->getClientOriginalName()]),
+        ]);
+
+        return back()->with('success', 'PDF actualizado');
+    }
 
     private function geoLocate(string $ip): array
     {

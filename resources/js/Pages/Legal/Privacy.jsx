@@ -32,9 +32,9 @@ export default function Privacy() {
                             <div className="bg-gray-50 rounded-xl p-4 space-y-1 text-sm">
                                 <p><span className="font-medium">Titular:</span> Logan Naranjo Rodríguez</p>
                                 <p><span className="font-medium">DNI:</span> 5562544J</p>
-                                <p><span className="font-medium">Dirección:</span> [DIRECCIÓN_POSTAL]</p>
-                                <p><span className="font-medium">Correo electrónico:</span> [EMAIL_CONTACTO]</p>
-                                <p><span className="font-medium">Sitio web:</span> [URL_WEB]</p>
+                                <p><span className="font-medium">Dirección:</span> Jesús Morante Borras</p>
+                                <p><span className="font-medium">Correo electrónico:</span> contact@logannr.me</p>
+                                <p><span className="font-medium">Sitio web:</span> mqr.logannr.me</p>
                             </div>
                         </section>
 
@@ -76,13 +76,13 @@ export default function Privacy() {
                             <p className="mb-3">No se ceden datos a terceros salvo obligación legal. No obstante, para la prestación del servicio contamos con los siguientes encargados de tratamiento:</p>
                             <ul className="list-disc list-inside space-y-1.5 pl-2">
                                 <li><span className="font-medium">Supabase Inc.</span> — proveedor de base de datos (PostgreSQL en la nube). Servidores en la UE (AWS eu-west-1).</li>
-                                <li><span className="font-medium">[PROVEEDOR_HOSTING]</span> — alojamiento de la aplicación. [UBICACIÓN_SERVIDORES].</li>
+                                <li><span className="font-medium">Strato</span> — alojamiento de la aplicación. Alemania.</li>
                             </ul>
                         </section>
 
                         <section>
                             <h2 className="text-base font-semibold text-gray-900 mb-3">6. Derechos del interesado</h2>
-                            <p className="mb-3">Puede ejercer los siguientes derechos escribiendo a <strong>[EMAIL_CONTACTO]</strong>, adjuntando copia de su DNI u otro documento identificativo:</p>
+                            <p className="mb-3">Puede ejercer los siguientes derechos escribiendo a <strong>contact@logannr.me</strong>, adjuntando copia de su DNI u otro documento identificativo:</p>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {['Acceso', 'Rectificación', 'Supresión', 'Oposición', 'Limitación', 'Portabilidad'].map(d => (
                                     <div key={d} className="bg-gray-50 rounded-xl px-3 py-2 text-sm font-medium text-gray-700">{d}</div>

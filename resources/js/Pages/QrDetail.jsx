@@ -11,17 +11,23 @@ import {
 import {
     ArrowLeft, Copy, Download, ScanLine, Link2, Hash,
     Pencil, X, Save, Loader2, ToggleLeft, ToggleRight, Palette,
-    Globe, User, Wifi
+    Globe, User, Wifi, ImagePlus, Trash2, CalendarDays, TrendingUp, Clock, Monitor, MapPin,
+    FileText, ExternalLink
 } from 'lucide-react';
 
 const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB'];
 const PREVIEW_SIZE = 220;
 
 const TYPE_META = {
-    url:   { icon: Globe, label: 'URL',   color: 'text-blue-600 bg-blue-50 border-blue-100' },
-    vcard: { icon: User,  label: 'vCard', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-    wifi:  { icon: Wifi,  label: 'WiFi',  color: 'text-green-600 bg-green-50 border-green-100' },
+    url:   { icon: Globe,     label: 'URL',   color: 'text-blue-600 bg-blue-50 border-blue-100' },
+    vcard: { icon: User,      label: 'vCard', color: 'text-purple-600 bg-purple-50 border-purple-100' },
+    wifi:  { icon: Wifi,      label: 'WiFi',  color: 'text-green-600 bg-green-50 border-green-100' },
+    pdf:   { icon: FileText,  label: 'PDF',   color: 'text-orange-600 bg-orange-50 border-orange-100' },
 };
+
+const DEVICE_LABELS  = { mobile: 'Móvil', desktop: 'Escritorio', tablet: 'Tablet' };
+const translate = (val) => val === 'Unknown' || !val ? 'Desconocido' : val;
+const deviceLabel = (d) => DEVICE_LABELS[d] ?? translate(d);
 
 function buildWifi(d) {
     const esc = s => String(s || '').replace(/([\\;,":])/, '\\$1');
@@ -48,6 +54,11 @@ function validateByType(data, type) {
     return errs;
 }
 
+function formatDate(dt) {
+    if (!dt) return '—';
+    return new Date(dt).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function QrDetail({ qr, stats }) {
     const qrRef      = useRef(null);
     const qrInstance = useRef(null);
@@ -55,10 +66,21 @@ export default function QrDetail({ qr, stats }) {
     const [clientErrors, setClientErrors] = useState({});
     const [touched, setTouched]           = useState({});
 
+    // PDF state
+    const [pdfFile, setPdfFile]           = useState(null);
+    const [uploadingPdf, setUploadingPdf] = useState(false);
+    const pdfInputRef = useRef(null);
+
+    // Logo state
+    const [logoFile, setLogoFile]       = useState(null);
+    const [logoSize, setLogoSize]       = useState(qr.logo_size || 30);
+    const [logoPreview, setLogoPreview] = useState(null);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const logoInputRef = useRef(null);
+
     const { data, setData, put, processing, errors } = useForm({
         name:             qr.name,
         destination_url:  qr.destination_url,
-        // vCard
         vc_first_name: qr.meta?.vc_first_name ?? '',
         vc_last_name:  qr.meta?.vc_last_name  ?? '',
         vc_phone:      qr.meta?.vc_phone      ?? '',
@@ -66,12 +88,10 @@ export default function QrDetail({ qr, stats }) {
         vc_company:    qr.meta?.vc_company    ?? '',
         vc_website:    qr.meta?.vc_website    ?? '',
         vc_address:    qr.meta?.vc_address    ?? '',
-        // WiFi
         wifi_ssid:     qr.meta?.wifi_ssid     ?? '',
         wifi_password: qr.meta?.wifi_password ?? '',
         wifi_security: qr.meta?.wifi_security ?? 'WPA',
         wifi_hidden:   qr.meta?.wifi_hidden   ?? false,
-        // Design
         fg_color:         qr.fg_color,
         bg_color:         qr.bg_color,
         dot_style:        qr.dot_style,
@@ -82,26 +102,31 @@ export default function QrDetail({ qr, stats }) {
 
     const redirectUrl = `${window.location.origin}/r/${qr.slug}`;
 
-    // WiFi QRs encode data directly; URL/vCard use the redirect slug
     const qrPreviewData = useMemo(() => {
         if (qr.qr_type === 'wifi') return buildWifi(data);
         return redirectUrl;
-    }, [
-        qr.qr_type, redirectUrl,
-        data.wifi_ssid, data.wifi_password, data.wifi_security, data.wifi_hidden,
-    ]);
+    }, [qr.qr_type, redirectUrl, data.wifi_ssid, data.wifi_password, data.wifi_security, data.wifi_hidden]);
 
     useEffect(() => {
-        qrInstance.current = new QRCodeStyling({
-            width: qr.qr_size, height: qr.qr_size,
-            data: qrPreviewData,
-            dotsOptions:          { color: qr.fg_color,    type: qr.dot_style },
-            cornersSquareOptions: { type: qr.corner_style },
-            backgroundOptions:    { color: qr.bg_color },
-        });
-        if (qrRef.current) {
-            qrRef.current.innerHTML = '';
-            qrInstance.current.append(qrRef.current);
+        try {
+            const opts = {
+                width: qr.qr_size, height: qr.qr_size,
+                data: qrPreviewData,
+                dotsOptions:          { color: qr.fg_color,    type: qr.dot_style },
+                cornersSquareOptions: { type: qr.corner_style },
+                backgroundOptions:    { color: qr.bg_color },
+            };
+            if (qr.logo_url) {
+                opts.image = qr.logo_url;
+                opts.imageOptions = { crossOrigin: 'anonymous', margin: 4, imageSize: (qr.logo_size || 30) / 100 };
+            }
+            qrInstance.current = new QRCodeStyling(opts);
+            if (qrRef.current) {
+                qrRef.current.innerHTML = '';
+                qrInstance.current.append(qrRef.current);
+            }
+        } catch (err) {
+            console.error('[QrDetail] Error al inicializar QR:', err);
         }
     }, []);
 
@@ -115,6 +140,19 @@ export default function QrDetail({ qr, stats }) {
             height: data.qr_size,
         });
     }, [qrPreviewData, data.fg_color, data.bg_color, data.dot_style, data.corner_style, data.qr_size]);
+
+    // Re-apply logo when qr.logo_url changes (after upload/remove Inertia refreshes props)
+    useEffect(() => {
+        if (!qrInstance.current) return;
+        if (qr.logo_url) {
+            qrInstance.current.update({
+                image: qr.logo_url,
+                imageOptions: { crossOrigin: 'anonymous', margin: 4, imageSize: (qr.logo_size || 30) / 100 },
+            });
+        } else {
+            qrInstance.current.update({ image: '' });
+        }
+    }, [qr.logo_url, qr.logo_size]);
 
     useEffect(() => {
         if (Object.keys(touched).length > 0) {
@@ -159,18 +197,68 @@ export default function QrDetail({ qr, stats }) {
         });
     };
 
+    // PDF handlers
+    const uploadPdf = (e) => {
+        e.preventDefault();
+        if (!pdfFile) return;
+        const fd = new FormData();
+        fd.append('pdf_file', pdfFile);
+        setUploadingPdf(true);
+        router.post(route('qr.pdf', qr.id), fd, {
+            onSuccess: () => { toast.success('PDF actualizado'); setPdfFile(null); setUploadingPdf(false); },
+            onError: () => { toast.error('Error al subir el PDF'); setUploadingPdf(false); },
+        });
+    };
+
+    // Logo handlers
+    const handleLogoFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setLogoFile(file);
+        setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const logoChanged = logoFile !== null || logoSize !== (qr.logo_size || 30);
+
+    const uploadLogo = (e) => {
+        e.preventDefault();
+        if (!logoChanged) return;
+        const fd = new FormData();
+        if (logoFile) fd.append('logo', logoFile);
+        fd.append('logo_size', logoSize);
+        setUploadingLogo(true);
+        router.post(route('qr.logo', qr.id), fd, {
+            onSuccess: () => {
+                toast.success('Logo actualizado');
+                setLogoFile(null);
+                setLogoPreview(null);
+                setUploadingLogo(false);
+            },
+            onError: () => { toast.error('Error al subir el logo'); setUploadingLogo(false); },
+        });
+    };
+
+    const removeLogo = () => {
+        router.delete(route('qr.logo.remove', qr.id), {
+            onSuccess: () => { toast.success('Logo eliminado'); setLogoFile(null); setLogoPreview(null); },
+            onError:   () => toast.error('Error al eliminar el logo'),
+        });
+    };
+
     const typeInfo = TYPE_META[qr.qr_type] ?? TYPE_META.url;
     const TypeIcon = typeInfo.icon;
 
-    // Human-readable content summary for the info card
     const contentSummary = () => {
         if (qr.qr_type === 'vcard') {
             const name = [qr.meta?.vc_first_name, qr.meta?.vc_last_name].filter(Boolean).join(' ');
             return name || '—';
         }
         if (qr.qr_type === 'wifi') return qr.meta?.wifi_ssid || '—';
+        if (qr.qr_type === 'pdf')  return qr.meta?.pdf_name || '—';
         return qr.destination_url;
     };
+
+    const currentLogo = logoPreview || qr.logo_url || null;
 
     return (
         <AuthenticatedLayout>
@@ -244,7 +332,6 @@ export default function QrDetail({ qr, stats }) {
                             />
                         </div>
 
-                        {/* Redirect URL (only for url/vcard types) */}
                         {qr.qr_type !== 'wifi' && (
                             <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2 overflow-hidden">
                                 <span className="text-xs text-gray-500 truncate font-mono min-w-0">{redirectUrl}</span>
@@ -275,6 +362,7 @@ export default function QrDetail({ qr, stats }) {
                             animate-in fade-in slide-in-from-bottom-3 duration-500"
                         style={{ animationDelay: '120ms', animationFillMode: 'backwards' }}
                     >
+                        {/* Total scans */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <ScanLine size={13} /> Total escaneos
@@ -282,22 +370,197 @@ export default function QrDetail({ qr, stats }) {
                             <p className="text-3xl font-bold text-gray-900 tabular-nums">{(qr.scans_count ?? 0).toLocaleString()}</p>
                         </div>
 
+                        {/* Today */}
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                                <CalendarDays size={13} /> Hoy
+                            </div>
+                            <p className="text-3xl font-bold text-gray-900 tabular-nums">{(stats.today ?? 0).toLocaleString()}</p>
+                        </div>
+
+                        {/* This week */}
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                                <TrendingUp size={13} /> Esta semana
+                            </div>
+                            <p className="text-3xl font-bold text-gray-900 tabular-nums">{(stats.week ?? 0).toLocaleString()}</p>
+                        </div>
+
+                        {/* Content */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-2 flex flex-col gap-1 min-w-0">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <TypeIcon size={13} />
                                 {qr.qr_type === 'url'   && 'URL destino'}
                                 {qr.qr_type === 'vcard' && 'Contacto'}
                                 {qr.qr_type === 'wifi'  && 'Red WiFi'}
+                                {qr.qr_type === 'pdf'   && 'Documento PDF'}
                             </div>
                             <p className="text-sm font-medium text-gray-800 truncate">{contentSummary()}</p>
                         </div>
 
+                        {/* Last scan */}
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                                <Clock size={13} /> Último escaneo
+                            </div>
+                            <p className="text-xs font-medium text-gray-700 leading-relaxed">{formatDate(qr.last_scan)}</p>
+                        </div>
+
+                        {/* Slug */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:col-span-3 flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                                 <Hash size={13} /> Slug de redirección
                             </div>
                             <p className="text-sm font-mono text-gray-700 break-all">/r/{qr.slug}</p>
                         </div>
+                    </div>
+                </div>
+
+                {/* PDF section — only for pdf type */}
+                {qr.qr_type === 'pdf' && (
+                    <div
+                        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+                            animate-in fade-in slide-in-from-bottom-3 duration-500"
+                        style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
+                    >
+                        <div className="flex items-center gap-2 mb-4">
+                            <FileText size={15} className="text-gray-400" />
+                            <h3 className="text-sm font-semibold text-gray-900">Documento PDF</h3>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-6">
+                            {/* Current PDF */}
+                            <div className="flex flex-col gap-2">
+                                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-1 p-2">
+                                    <FileText size={28} className="text-gray-300" />
+                                    <span className="text-[10px] text-gray-400 text-center leading-tight break-all line-clamp-2">
+                                        {qr.meta?.pdf_name || '—'}
+                                    </span>
+                                </div>
+                                {qr.destination_url && (
+                                    <a
+                                        href={qr.destination_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-black transition-colors justify-center"
+                                    >
+                                        <ExternalLink size={11} /> Ver PDF
+                                    </a>
+                                )}
+                            </div>
+
+                            {/* Replace form */}
+                            <form onSubmit={uploadPdf} className="flex-1 space-y-3">
+                                <div>
+                                    <input
+                                        ref={pdfInputRef}
+                                        type="file"
+                                        accept="application/pdf"
+                                        onChange={e => setPdfFile(e.target.files[0] || null)}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => pdfInputRef.current?.click()}
+                                        className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+                                    >
+                                        <FileText size={14} />
+                                        {pdfFile ? pdfFile.name : 'Seleccionar nuevo PDF'}
+                                    </button>
+                                    <p className="text-xs text-gray-400 mt-1.5">Reemplaza el PDF actual. El QR no cambia. Máximo 5 MB.</p>
+                                </div>
+                                {pdfFile && (
+                                    <button
+                                        type="submit"
+                                        disabled={uploadingPdf}
+                                        className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-60"
+                                    >
+                                        {uploadingPdf ? <><Loader2 size={14} className="animate-spin" /> Subiendo...</> : <><FileText size={14} /> Guardar PDF</>}
+                                    </button>
+                                )}
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Logo section */}
+                <div
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+                        animate-in fade-in slide-in-from-bottom-3 duration-500"
+                    style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <ImagePlus size={15} className="text-gray-400" />
+                        <h3 className="text-sm font-semibold text-gray-900">Logo del QR</h3>
+                        <span className="text-xs text-gray-400">(opcional)</span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-6">
+                        {/* Current logo / preview */}
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                {currentLogo ? (
+                                    <img src={currentLogo} alt="Logo QR" className="w-full h-full object-contain p-1" />
+                                ) : (
+                                    <ImagePlus size={24} className="text-gray-300" />
+                                )}
+                            </div>
+                            {qr.logo_url && !logoPreview && (
+                                <button
+                                    type="button"
+                                    onClick={removeLogo}
+                                    className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"
+                                >
+                                    <Trash2 size={12} /> Quitar logo
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Upload form */}
+                        <form onSubmit={uploadLogo} className="flex-1 space-y-3">
+                            <div>
+                                <input
+                                    ref={logoInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                                    onChange={handleLogoFile}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => logoInputRef.current?.click()}
+                                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+                                >
+                                    <ImagePlus size={14} />
+                                    {logoFile ? logoFile.name : 'Seleccionar imagen'}
+                                </button>
+                                <p className="text-xs text-gray-400 mt-1.5">PNG, JPG o WebP. Máximo 1 MB.</p>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="text-xs font-medium text-gray-600">Tamaño del logo</label>
+                                    <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-200">{logoSize}%</span>
+                                </div>
+                                <input
+                                    type="range" min="10" max="50" step="5"
+                                    value={logoSize}
+                                    onChange={e => setLogoSize(parseInt(e.target.value))}
+                                    className="w-full max-w-xs accent-black"
+                                />
+                                <div className="flex justify-between text-xs text-gray-400 mt-1 max-w-xs"><span>10%</span><span>50%</span></div>
+                            </div>
+
+                            {logoChanged && (
+                                <button
+                                    type="submit"
+                                    disabled={uploadingLogo}
+                                    className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-60"
+                                >
+                                    {uploadingLogo ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : <><ImagePlus size={14} /> Guardar logo</>}
+                                </button>
+                            )}
+                        </form>
                     </div>
                 </div>
 
@@ -314,18 +577,27 @@ export default function QrDetail({ qr, stats }) {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Nombre siempre */}
+                            {/* Nombre */}
                             <div className={qr.qr_type === 'url' ? '' : 'sm:col-span-2'}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
                                 <input value={data.name} onChange={e => setData('name', e.target.value)} onBlur={() => touch('name')} className={inputClass('name')} />
                                 {allErrors.name && <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.name}</p>}
                             </div>
 
-                            {/* URL destino */}
+                            {/* URL destino — hidden for PDF (managed via upload) */}
                             {qr.qr_type === 'url' && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">URL destino</label>
-                                    <input value={data.destination_url} onChange={e => setData('destination_url', e.target.value)} onBlur={() => touch('destination_url')} className={inputClass('destination_url')} />
+                                    <input
+                                        value={data.destination_url}
+                                        onChange={e => setData('destination_url', e.target.value)}
+                                        onBlur={() => {
+                                            touch('destination_url');
+                                            const val = data.destination_url.trim();
+                                            if (val && !val.match(/^https?:\/\//i)) setData('destination_url', 'https://' + val);
+                                        }}
+                                        className={inputClass('destination_url')}
+                                    />
                                     {allErrors.destination_url && <p className="text-red-500 text-xs mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">{allErrors.destination_url}</p>}
                                 </div>
                             )}
@@ -394,7 +666,7 @@ export default function QrDetail({ qr, stats }) {
                                 </>
                             )}
 
-                            {/* Design — always */}
+                            {/* Design */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Color principal</label>
                                 <ColorPicker label="Color principal" value={data.fg_color} onChange={v => setData('fg_color', v)} />
@@ -442,62 +714,152 @@ export default function QrDetail({ qr, stats }) {
                     </form>
                 )}
 
-                {/* Charts */}
-                {stats.timeline.length > 0 && (
+                {/* ── Charts ── */}
+
+                {/* Timeline */}
+                {stats.timeline?.length > 0 && (
                     <div
                         className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
                             animate-in fade-in slide-in-from-bottom-3 duration-500"
                         style={{ animationDelay: '180ms', animationFillMode: 'backwards' }}
                     >
-                        <h3 className="text-sm font-semibold text-gray-700 mb-5">Escaneos últimos 30 días</h3>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-5">Escaneos — últimos 30 días</h3>
                         <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={stats.timeline}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                                 <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0,0,0,.05)' }} />
-                                <Line type="monotone" dataKey="count" stroke="#000" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#000' }} />
+                                <Line type="monotone" dataKey="count" name="Escaneos" stroke="#000" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#000' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 )}
 
-                {(stats.devices.length > 0 || stats.countries.length > 0) && (
+                {/* Grid of charts */}
+                {((stats.devices?.length > 0) || (stats.browsers?.length > 0) || (stats.os?.length > 0) || (stats.countries?.length > 0) || (stats.cities?.length > 0)) && (
                     <div
-                        className="grid grid-cols-1 sm:grid-cols-2 gap-5
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4
                             animate-in fade-in slide-in-from-bottom-3 duration-500"
                         style={{ animationDelay: '240ms', animationFillMode: 'backwards' }}
                     >
-                        {stats.devices.length > 0 && (
+                        {/* Devices */}
+                        {stats.devices?.length > 0 && (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-5">Dispositivos</h3>
+                                <div className="flex items-center gap-1.5 mb-5">
+                                    <Monitor size={14} className="text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700">Dispositivos</h3>
+                                </div>
                                 <ResponsiveContainer width="100%" height={180}>
                                     <PieChart>
-                                        <Pie data={stats.devices} dataKey="count" nameKey="device" cx="50%" cy="50%" outerRadius={70}
-                                            label={({ device, percent }) => `${String(device).slice(0, 8)} ${(percent * 100).toFixed(0)}%`}
+                                        <Pie
+                                            data={stats.devices.map(d => ({ ...d, device: deviceLabel(d.device) }))}
+                                            dataKey="count" nameKey="device" cx="50%" cy="50%" outerRadius={70}
+                                            label={({ device, percent }) => `${String(device).slice(0, 10)} ${(percent * 100).toFixed(0)}%`}
                                             labelLine={false}
                                         >
                                             {stats.devices.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Pie>
-                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
+                                        <Tooltip formatter={(v, n) => [v, n]} contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
                         )}
-                        {stats.countries.length > 0 && (
+
+                        {/* Browsers */}
+                        {stats.browsers?.length > 0 && (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-5">Top países</h3>
+                                <div className="flex items-center gap-1.5 mb-5">
+                                    <Globe size={14} className="text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700">Navegadores</h3>
+                                </div>
                                 <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={stats.countries} layout="vertical">
+                                    <BarChart data={stats.browsers.map(b => ({ ...b, browser: translate(b.browser) }))} layout="vertical">
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                                        <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                        <YAxis dataKey="country" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={80} axisLine={false} tickLine={false} />
+                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                        <YAxis dataKey="browser" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={70} axisLine={false} tickLine={false} />
                                         <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
-                                        <Bar dataKey="count" fill="#000" radius={[0, 6, 6, 0]} />
+                                        <Bar dataKey="count" name="Escaneos" fill="#000" radius={[0, 6, 6, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         )}
+
+                        {/* OS */}
+                        {stats.os?.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                                <div className="flex items-center gap-1.5 mb-5">
+                                    <Monitor size={14} className="text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700">Sistema operativo</h3>
+                                </div>
+                                <ResponsiveContainer width="100%" height={180}>
+                                    <BarChart data={stats.os.map(o => ({ ...o, os: translate(o.os) }))} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                        <YAxis dataKey="os" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={70} axisLine={false} tickLine={false} />
+                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
+                                        <Bar dataKey="count" name="Escaneos" fill="#374151" radius={[0, 6, 6, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+
+                        {/* Countries */}
+                        {stats.countries?.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                                <div className="flex items-center gap-1.5 mb-5">
+                                    <Globe size={14} className="text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700">Top países</h3>
+                                </div>
+                                <ResponsiveContainer width="100%" height={180}>
+                                    <BarChart data={stats.countries.map(c => ({ ...c, country: translate(c.country) }))} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                                        <YAxis dataKey="country" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={80} axisLine={false} tickLine={false} />
+                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6' }} />
+                                        <Bar dataKey="count" name="Escaneos" fill="#6B7280" radius={[0, 6, 6, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+
+                        {/* Cities */}
+                        {stats.cities?.length > 0 && (
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                                <div className="flex items-center gap-1.5 mb-5">
+                                    <MapPin size={14} className="text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700">Top ciudades</h3>
+                                </div>
+                                <div className="space-y-2.5">
+                                    {stats.cities.map((c, i) => {
+                                        const max = stats.cities[0]?.count || 1;
+                                        const pct = Math.round((c.count / max) * 100);
+                                        return (
+                                            <div key={i} className="flex items-center gap-3">
+                                                <span className="text-xs text-gray-500 w-24 truncate flex-shrink-0">{translate(c.city)}</span>
+                                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-black rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                                </div>
+                                                <span className="text-xs font-mono text-gray-500 w-6 text-right flex-shrink-0">{c.count}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Empty stats state */}
+                {!stats.timeline?.length && !stats.devices?.length && (
+                    <div
+                        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center
+                            animate-in fade-in slide-in-from-bottom-3 duration-500"
+                        style={{ animationDelay: '180ms', animationFillMode: 'backwards' }}
+                    >
+                        <ScanLine size={32} className="text-gray-200 mx-auto mb-3" />
+                        <p className="text-sm font-medium text-gray-500">Sin escaneos todavía</p>
+                        <p className="text-xs text-gray-400 mt-1">Comparte tu QR para empezar a ver estadísticas.</p>
                     </div>
                 )}
             </div>

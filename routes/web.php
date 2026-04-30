@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrController;
 use Illuminate\Foundation\Application;
@@ -32,10 +33,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/qr/{id}', [QrController::class, 'update'])->name('qr.update');
     Route::delete('/qr/{id}', [QrController::class, 'destroy'])->name('qr.destroy');
     Route::patch('/qr/{id}/toggle', [QrController::class, 'toggle'])->name('qr.toggle');
+    Route::post('/qr/{id}/logo', [QrController::class, 'uploadLogo'])->name('qr.logo');
+    Route::delete('/qr/{id}/logo', [QrController::class, 'removeLogo'])->name('qr.logo.remove');
+    Route::post('/qr/{id}/pdf', [QrController::class, 'uploadPdf'])->name('qr.pdf');
+
+    // Admin-only routes
+    Route::middleware(\App\Http\Middleware\EnsureAdmin::class)->group(function () {
+        Route::get('/admin/settings', [SettingsController::class, 'show'])->name('admin.settings');
+        Route::post('/admin/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
+    });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 

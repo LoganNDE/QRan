@@ -49,6 +49,25 @@ class ProfileController extends Controller
         return back()->with('success', 'Contraseña actualizada');
     }
 
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->avatar_url) {
+            $rel = ltrim(str_replace('/storage', '', $user->avatar_url), '/');
+            Storage::disk('public')->delete($rel);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->update(['avatar_url' => Storage::url($path)]);
+
+        return back()->with('success', 'Foto de perfil actualizada');
+    }
+
     public function destroy(Request $request)
     {
         $request->validate(['password' => 'required']);

@@ -1,9 +1,9 @@
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, Check } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, Check, UserX, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Register() {
+export default function Register({ registrationsEnabled = true }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
 
@@ -37,6 +37,34 @@ export default function Register() {
     return (
         <GuestLayout>
             <Head title="Crear cuenta" />
+
+            {/* Registrations disabled overlay */}
+            {!registrationsEnabled && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 max-w-sm w-full text-center animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+                        <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                            <UserX size={26} className="text-gray-500" />
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Registros desactivados</h2>
+                        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                            Actualmente no se aceptan nuevos registros. Puedes solicitar acceso contactando con el administrador.
+                        </p>
+                        <a
+                            href="mailto:contact@logannr.me"
+                            className="inline-flex items-center justify-center gap-2 w-full bg-black text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] transition-all duration-150 mb-3"
+                        >
+                            <ExternalLink size={15} />
+                            Solicitar acceso
+                        </a>
+                        <Link
+                            href={route('login')}
+                            className="block text-sm text-gray-500 hover:text-black transition-colors"
+                        >
+                            ¿Ya tienes cuenta? Inicia sesión
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Crea tu cuenta</h1>
@@ -107,7 +135,6 @@ export default function Register() {
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                     </div>
-                    {/* Password strength bar */}
                     {data.password && (
                         <div className="mt-2 animate-in fade-in duration-200">
                             <div className="flex gap-1 mb-1">

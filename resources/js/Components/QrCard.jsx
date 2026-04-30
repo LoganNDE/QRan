@@ -1,12 +1,13 @@
 import { Link } from '@inertiajs/react';
-import { QrCode, ScanLine, Trash2, ExternalLink, Calendar, Globe, User, Wifi } from 'lucide-react';
+import { QrCode, ScanLine, Trash2, ExternalLink, Calendar, Globe, User, Wifi, FileText } from 'lucide-react';
 
-const TYPE_ICON  = { url: Globe, vcard: User, wifi: Wifi };
-const TYPE_LABEL = { url: 'URL', vcard: 'vCard', wifi: 'WiFi' };
+const TYPE_ICON  = { url: Globe, vcard: User, wifi: Wifi, pdf: FileText };
+const TYPE_LABEL = { url: 'URL', vcard: 'vCard', wifi: 'WiFi', pdf: 'PDF' };
 const TYPE_COLOR = {
     url:   'text-blue-500 bg-blue-50',
     vcard: 'text-purple-500 bg-purple-50',
     wifi:  'text-green-500 bg-green-50',
+    pdf:   'text-orange-500 bg-orange-50',
 };
 
 function cardSubtitle(qr) {
@@ -15,6 +16,7 @@ function cardSubtitle(qr) {
         return name || 'vCard';
     }
     if (qr.qr_type === 'wifi') return qr.meta?.wifi_ssid || 'WiFi';
+    if (qr.qr_type === 'pdf')  return qr.meta?.pdf_name  || 'Documento PDF';
     return qr.destination_url;
 }
 

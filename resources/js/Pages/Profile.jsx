@@ -1,8 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
-import { User, Mail, AtSign, Lock, Eye, EyeOff, Save, KeyRound, Loader2, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { User, Mail, AtSign, Lock, Eye, EyeOff, Save, KeyRound, Loader2, Shield, Camera } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 function Field({ label, icon: Icon, error, children }) {
     return (
@@ -49,6 +49,27 @@ const inputClass = (error) =>
     ${error ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`;
 
 export default function Profile({ user }) {
+    const avatarInputRef = useRef(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
+    const avatarForm = useForm({ avatar: null });
+
+    const handleAvatarFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        avatarForm.setData('avatar', file);
+        setAvatarPreview(URL.createObjectURL(file));
+    };
+
+    const uploadAvatar = (e) => {
+        e.preventDefault();
+        if (!avatarForm.data.avatar) return;
+        avatarForm.post(route('profile.avatar'), {
+            forceFormData: true,
+            onSuccess: () => { toast.success('Foto de perfil actualizada'); setAvatarPreview(null); avatarForm.reset(); },
+            onError: () => toast.error('Error al subir la foto'),
+        });
+    };
+
     const profileForm = useForm({
         name: user.name ?? '',
         username: user.username ?? '',
@@ -94,12 +115,41 @@ export default function Profile({ user }) {
                     className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center gap-5
                         animate-in fade-in slide-in-from-bottom-3 duration-500"
                 >
-                    <div className="relative group">
-                        <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center text-xl font-bold
-                            group-hover:scale-105 transition-transform duration-200 cursor-default select-none shadow-md">
-                            {initials}
-                        </div>
-                        <div className="absolute inset-0 rounded-2xl ring-4 ring-black/5 group-hover:ring-black/10 transition-all duration-200" />
+                    <div className="relative group flex-shrink-0">
+                        <form onSubmit={uploadAvatar}>
+                            <button
+                                type="button"
+                                onClick={() => avatarInputRef.current?.click()}
+                                className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-md focus:outline-none"
+                                title="Cambiar foto de perfil"
+                            >
+                                {(avatarPreview || user.avatar_url) ? (
+                                    <img
+                                        src={avatarPreview || user.avatar_url}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-black text-white flex items-center justify-center text-xl font-bold select-none">
+                                        {initials}
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                    <Camera size={18} className="text-white" />
+                                </div>
+                            </button>
+                            <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
+                            {avatarForm.data.avatar && (
+                                <button
+                                    type="submit"
+                                    disabled={avatarForm.processing}
+                                    className="absolute -bottom-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-800 transition-colors"
+                                    title="Guardar foto"
+                                >
+                                    {avatarForm.processing ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                                </button>
+                            )}
+                        </form>
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{user.name}</p>
@@ -108,6 +158,7 @@ export default function Profile({ user }) {
                             <Shield size={11} />
                             {user.plan ?? 'free'}
                         </span>
+                        <p className="text-xs text-gray-400 mt-1">Haz clic en la foto para cambiarla</p>
                     </div>
                 </div>
 

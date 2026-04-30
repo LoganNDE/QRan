@@ -103,7 +103,7 @@ export default function Terms() {
 
                         <section>
                             <h2 className="text-base font-semibold text-gray-900 mb-3">11. Contacto</h2>
-                            <p>Para cualquier consulta relacionada con estos términos, puedes contactar con nosotros en: <strong>[EMAIL_CONTACTO]</strong></p>
+                            <p>Para cualquier consulta relacionada con estos términos, puedes contactar con nosotros en: <strong>contact@logannr.me</strong></p>
                         </section>
                     </div>
                 </div>

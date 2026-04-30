@@ -31,16 +31,16 @@ export default function LegalNotice() {
                             <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
                                 <p><span className="font-medium">Titular:</span> Logan Naranjo Rodríguez</p>
                                 <p><span className="font-medium">DNI:</span> 5562544J</p>
-                                <p><span className="font-medium">Domicilio:</span> [DIRECCIÓN_POSTAL]</p>
-                                <p><span className="font-medium">Correo electrónico:</span> [EMAIL_CONTACTO]</p>
-                                <p><span className="font-medium">Sitio web:</span> [URL_WEB]</p>
+                                <p><span className="font-medium">Domicilio:</span> Jesús Morante Borras</p>
+                                <p><span className="font-medium">Correo electrónico:</span> contact@logannr.me</p>
+                                <p><span className="font-medium">Sitio web:</span> mqr.logannr.me</p>
                                 <p><span className="font-medium">Denominación del servicio:</span> MQR</p>
                             </div>
                         </section>
 
                         <section>
                             <h2 className="text-base font-semibold text-gray-900 mb-3">2. Objeto</h2>
-                            <p>El presente Aviso Legal regula el acceso y uso del sitio web <strong>[URL_WEB]</strong> (en adelante, «el Sitio»), titularidad de Logan Naranjo Rodríguez. El acceso al Sitio implica la aceptación plena y sin reservas de las presentes condiciones.</p>
+                            <p>El presente Aviso Legal regula el acceso y uso del sitio web <strong>mqr.logannr.me</strong> (en adelante, «el Sitio»), titularidad de Logan Naranjo Rodríguez. El acceso al Sitio implica la aceptación plena y sin reservas de las presentes condiciones.</p>
                         </section>
 
                         <section>
@@ -74,7 +74,7 @@ export default function LegalNotice() {
 
                         <section>
                             <h2 className="text-base font-semibold text-gray-900 mb-3">6. Ley aplicable y jurisdicción</h2>
-                            <p>Las presentes condiciones se rigen por la legislación española. Para cualquier controversia derivada del acceso o uso del Sitio, las partes se someten a los Juzgados y Tribunales de <strong>[CIUDAD_JURISDICCIÓN]</strong>, con renuncia expresa a cualquier otro fuero que pudiera corresponderles.</p>
+                            <p>Las presentes condiciones se rigen por la legislación española. Para cualquier controversia derivada del acceso o uso del Sitio, las partes se someten a los Juzgados y Tribunales de <strong>Valencia</strong>, con renuncia expresa a cualquier otro fuero que pudiera corresponderles.</p>
                         </section>
 
                         <section>
@@ -85,6 +85,50 @@ export default function LegalNotice() {
                         <section>
                             <h2 className="text-base font-semibold text-gray-900 mb-3">8. Modificaciones</h2>
                             <p>El titular se reserva el derecho a modificar el presente Aviso Legal en cualquier momento. Las modificaciones serán efectivas desde su publicación en el Sitio.</p>
+                        </section>
+
+                        <section>
+                            <h2 className="text-base font-semibold text-gray-900 mb-3">9. Créditos de software de código abierto</h2>
+                            <p className="mb-3">MQR se ha desarrollado haciendo uso de los siguientes proyectos de código abierto, distribuidos bajo sus respectivas licencias:</p>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-gray-200">
+                                            <th className="text-left py-2 pr-4 font-semibold text-gray-700">Proyecto</th>
+                                            <th className="text-left py-2 pr-4 font-semibold text-gray-700">Licencia</th>
+                                            <th className="text-left py-2 font-semibold text-gray-700">Uso</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-gray-600">
+                                        {[
+                                            { name: 'Laravel', license: 'MIT', use: 'Framework backend PHP' },
+                                            { name: 'React', license: 'MIT', use: 'Interfaz de usuario' },
+                                            { name: 'Inertia.js', license: 'MIT', use: 'Puente servidor–cliente' },
+                                            { name: 'Vite', license: 'MIT', use: 'Empaquetado y compilación frontend' },
+                                            { name: 'Tailwind CSS', license: 'MIT', use: 'Estilos y diseño visual' },
+                                            { name: 'qr-code-styling', license: 'MIT', use: 'Generación y personalización de QR codes' },
+                                            { name: 'Recharts', license: 'MIT', use: 'Gráficas de estadísticas' },
+                                            { name: 'Lucide React', license: 'ISC', use: 'Iconografía de la interfaz' },
+                                            { name: 'react-hot-toast', license: 'MIT', use: 'Notificaciones de usuario' },
+                                            { name: 'Headless UI', license: 'MIT', use: 'Componentes UI accesibles' },
+                                            { name: 'Axios', license: 'MIT', use: 'Cliente HTTP' },
+                                            { name: 'Zustand', license: 'MIT', use: 'Gestión de estado global' },
+                                            { name: 'Laravel Sanctum', license: 'MIT', use: 'Autenticación y gestión de sesiones' },
+                                            { name: 'Ziggy', license: 'MIT', use: 'Rutas Laravel en JavaScript' },
+                                            { name: 'Doctrine DBAL', license: 'MIT/LGPL', use: 'Capa de abstracción de base de datos' },
+                                        ].map(({ name, license, use }) => (
+                                            <tr key={name} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                                <td className="py-2 pr-4 font-medium text-gray-800">{name}</td>
+                                                <td className="py-2 pr-4">
+                                                    <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">{license}</span>
+                                                </td>
+                                                <td className="py-2 text-gray-500">{use}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="mt-3 text-gray-500">Los textos completos de cada licencia están disponibles en los repositorios oficiales de cada proyecto. MQR no reclama ningún derecho sobre dichos proyectos y los utiliza de conformidad con sus condiciones de distribución.</p>
                         </section>
                     </div>
                 </div>

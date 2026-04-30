@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Settings;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error'   => $request->session()->get('error'),
             ],
+            'registrationsEnabled' => Settings::get('registrations_enabled', true),
             'qrUsage' => $user ? [
                 'count'    => $user->qrCodes()->count(),
                 'limit'    => $user->is_admin ? null : $user->qr_limit,

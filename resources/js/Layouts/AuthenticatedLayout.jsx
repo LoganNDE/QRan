@@ -1,6 +1,6 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { QrCode, LayoutDashboard, User, LogOut, ChevronDown, Plus } from 'lucide-react';
+import { QrCode, LayoutDashboard, User, LogOut, ChevronDown, Plus, ShieldAlert } from 'lucide-react';
 
 export default function AuthenticatedLayout({ children, header }) {
     const { auth, qrUsage } = usePage().props;
@@ -56,8 +56,14 @@ export default function AuthenticatedLayout({ children, header }) {
                                     onClick={() => setDropdownOpen(v => !v)}
                                     className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
                                 >
-                                    <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold select-none">
-                                        {initials}
+                                    <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                                        {user.avatar_url ? (
+                                            <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-black text-white flex items-center justify-center text-xs font-bold select-none">
+                                                {initials}
+                                            </div>
+                                        )}
                                     </div>
                                     <span className="text-sm font-medium text-gray-700 hidden sm:block max-w-[120px] truncate">
                                         {user.name}
@@ -89,6 +95,16 @@ export default function AuthenticatedLayout({ children, header }) {
                                                 <User size={14} className="text-gray-400" />
                                                 Mi perfil
                                             </Link>
+                                            {qrUsage?.is_admin && (
+                                                <Link
+                                                    href={route('admin.settings')}
+                                                    onClick={() => setDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <ShieldAlert size={14} className="text-gray-400" />
+                                                    Administración
+                                                </Link>
+                                            )}
                                             <div className="border-t border-gray-100 mt-1 pt-1">
                                                 <button
                                                     onClick={logout}

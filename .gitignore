@@ -39,3 +39,8 @@ Homestead.yaml
 .claude/
 CLAUDE.md
 *.claude
+
+# Ficheros internos (no subir a GitHub)
+supabase_rls.sql
+legal_data.txt
+linkedin.txt
