@@ -100,8 +100,8 @@ class QrController extends Controller
             $request->validate([
                 'pdf_file' => 'required|file|mimes:pdf|max:5120',
             ]);
-            $path = $request->file('pdf_file')->store('pdfs', 'public');
-            $base['destination_url'] = Storage::url($path);
+            $path = $request->file('pdf_file')->store('pdfs', 'uploads');
+            $base['destination_url'] = Storage::disk('uploads')->url($path);
             $meta = ['pdf_name' => $request->file('pdf_file')->getClientOriginalName()];
         }
 
@@ -116,9 +116,9 @@ class QrController extends Controller
 
         if ($request->hasFile('logo')) {
             $request->validate(['logo' => 'image|mimes:jpeg,png,jpg,gif,webp|max:1024']);
-            $path = $request->file('logo')->store('logos', 'public');
+            $path = $request->file('logo')->store('logos', 'uploads');
             $qr->update([
-                'logo_url'  => Storage::url($path),
+                'logo_url'  => Storage::disk('uploads')->url($path),
                 'logo_size' => (int) $request->input('logo_size', 30),
             ]);
         }
@@ -313,13 +313,12 @@ class QrController extends Controller
         }
 
         if ($qr->qr_type === 'pdf') {
-            // Serve the PDF through Laravel to avoid web-server permission issues (403)
-            $rel = ltrim(str_replace('/storage/', '', parse_url($qr->destination_url, PHP_URL_PATH)), '/');
-            if (!Storage::disk('public')->exists($rel)) {
+            $rel = ltrim(preg_replace('#^.*/uploads/#', '', $qr->destination_url), '/');
+            if (!Storage::disk('uploads')->exists($rel)) {
                 abort(404);
             }
             $originalName = $qr->meta['pdf_name'] ?? basename($rel);
-            return Storage::disk('public')->response($rel, $originalName, [
+            return Storage::disk('uploads')->response($rel, $originalName, [
                 'Content-Type'        => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $originalName . '"',
             ]);
@@ -343,11 +342,10 @@ class QrController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($qr->logo_url) {
-                $rel = ltrim(str_replace('/storage', '', $qr->logo_url), '/');
-                Storage::disk('public')->delete($rel);
+                Storage::disk('uploads')->delete(ltrim(preg_replace('#^.*/uploads/#', '', $qr->logo_url), '/'));
             }
-            $path = $request->file('logo')->store('logos', 'public');
-            $updates['logo_url'] = Storage::url($path);
+            $path = $request->file('logo')->store('logos', 'uploads');
+            $updates['logo_url'] = Storage::disk('uploads')->url($path);
         }
 
         $qr->update($updates);
@@ -360,8 +358,7 @@ class QrController extends Controller
         $qr = QrCode::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
 
         if ($qr->logo_url) {
-            $rel = ltrim(str_replace('/storage', '', $qr->logo_url), '/');
-            Storage::disk('public')->delete($rel);
+            Storage::disk('uploads')->delete(ltrim(preg_replace('#^.*/uploads/#', '', $qr->logo_url), '/'));
         }
 
         $qr->update(['logo_url' => null, 'logo_size' => 30]);
@@ -376,14 +373,13 @@ class QrController extends Controller
         $request->validate(['pdf_file' => 'required|file|mimes:pdf|max:5120']);
 
         // Delete old PDF
-        if ($qr->destination_url && str_contains($qr->destination_url, '/storage/pdfs/')) {
-            $rel = ltrim(str_replace('/storage', '', $qr->destination_url), '/');
-            Storage::disk('public')->delete($rel);
+        if ($qr->destination_url && str_contains($qr->destination_url, '/uploads/pdfs/')) {
+            Storage::disk('uploads')->delete(ltrim(preg_replace('#^.*/uploads/#', '', $qr->destination_url), '/'));
         }
 
-        $path = $request->file('pdf_file')->store('pdfs', 'public');
+        $path = $request->file('pdf_file')->store('pdfs', 'uploads');
         $qr->update([
-            'destination_url' => Storage::url($path),
+            'destination_url' => Storage::disk('uploads')->url($path),
             'meta' => array_merge($qr->meta ?? [], ['pdf_name' => $request->file('pdf_file')->getClientOriginalName()]),
         ]);
 

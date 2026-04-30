@@ -58,12 +58,11 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if ($user->avatar_url) {
-            $rel = ltrim(str_replace('/storage', '', $user->avatar_url), '/');
-            Storage::disk('public')->delete($rel);
+            Storage::disk('uploads')->delete(ltrim(preg_replace('#^.*/uploads/#', '', $user->avatar_url), '/'));
         }
 
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $user->update(['avatar_url' => Storage::url($path)]);
+        $path = $request->file('avatar')->store('avatars', 'uploads');
+        $user->update(['avatar_url' => Storage::disk('uploads')->url($path)]);
 
         return back()->with('success', 'Foto de perfil actualizada');
     }
