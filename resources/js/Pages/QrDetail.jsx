@@ -5,8 +5,7 @@ import QRCodeStyling from 'qr-code-styling';
 import { toast, Toaster } from 'react-hot-toast';
 import ColorPicker from '@/Components/ColorPicker';
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
     ArrowLeft, Copy, Download, ScanLine, Link2, Hash,
@@ -17,6 +16,113 @@ import {
 
 const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB'];
 const PREVIEW_SIZE = 220;
+
+// Country name (Spanish / English) → ISO 3166-1 alpha-2
+const COUNTRY_ISO = {
+    'España': 'ES', 'Spain': 'ES',
+    'Estados Unidos': 'US', 'United States': 'US',
+    'México': 'MX', 'Mexico': 'MX',
+    'Argentina': 'AR',
+    'Colombia': 'CO',
+    'Chile': 'CL',
+    'Perú': 'PE', 'Peru': 'PE',
+    'Venezuela': 'VE',
+    'Ecuador': 'EC',
+    'Bolivia': 'BO',
+    'Uruguay': 'UY',
+    'Paraguay': 'PY',
+    'Cuba': 'CU',
+    'República Dominicana': 'DO', 'Dominican Republic': 'DO',
+    'Guatemala': 'GT',
+    'Honduras': 'HN',
+    'El Salvador': 'SV',
+    'Nicaragua': 'NI',
+    'Costa Rica': 'CR',
+    'Panamá': 'PA', 'Panama': 'PA',
+    'Puerto Rico': 'PR',
+    'Brasil': 'BR', 'Brazil': 'BR',
+    'Portugal': 'PT',
+    'Francia': 'FR', 'France': 'FR',
+    'Alemania': 'DE', 'Germany': 'DE',
+    'Italia': 'IT', 'Italy': 'IT',
+    'Reino Unido': 'GB', 'United Kingdom': 'GB',
+    'Países Bajos': 'NL', 'Netherlands': 'NL',
+    'Bélgica': 'BE', 'Belgium': 'BE',
+    'Suiza': 'CH', 'Switzerland': 'CH',
+    'Austria': 'AT',
+    'Suecia': 'SE', 'Sweden': 'SE',
+    'Noruega': 'NO', 'Norway': 'NO',
+    'Dinamarca': 'DK', 'Denmark': 'DK',
+    'Finlandia': 'FI', 'Finland': 'FI',
+    'Polonia': 'PL', 'Poland': 'PL',
+    'Rusia': 'RU', 'Russia': 'RU',
+    'Ucrania': 'UA', 'Ukraine': 'UA',
+    'Rumanía': 'RO', 'Romania': 'RO',
+    'Hungría': 'HU', 'Hungary': 'HU',
+    'República Checa': 'CZ', 'Czech Republic': 'CZ',
+    'Grecia': 'GR', 'Greece': 'GR',
+    'China': 'CN',
+    'Japón': 'JP', 'Japan': 'JP',
+    'Corea del Sur': 'KR', 'South Korea': 'KR',
+    'India': 'IN',
+    'Indonesia': 'ID',
+    'Tailandia': 'TH', 'Thailand': 'TH',
+    'Vietnam': 'VN',
+    'Filipinas': 'PH', 'Philippines': 'PH',
+    'Singapur': 'SG', 'Singapore': 'SG',
+    'Malasia': 'MY', 'Malaysia': 'MY',
+    'Australia': 'AU',
+    'Nueva Zelanda': 'NZ', 'New Zealand': 'NZ',
+    'Canadá': 'CA', 'Canada': 'CA',
+    'Turquía': 'TR', 'Turkey': 'TR',
+    'Arabia Saudita': 'SA', 'Saudi Arabia': 'SA',
+    'Emiratos Árabes Unidos': 'AE', 'United Arab Emirates': 'AE',
+    'Israel': 'IL',
+    'Marruecos': 'MA', 'Morocco': 'MA',
+    'Egipto': 'EG', 'Egypt': 'EG',
+    'Sudáfrica': 'ZA', 'South Africa': 'ZA',
+    'Nigeria': 'NG',
+    'Kenia': 'KE', 'Kenya': 'KE',
+};
+
+const flagEmoji = (countryName) => {
+    const iso = COUNTRY_ISO[countryName];
+    if (!iso) return '🌐';
+    return [...iso.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+};
+
+function StatList({ items, labelKey, color = '#000', showFlag = false }) {
+    const max = items[0]?.count || 1;
+    return (
+        <div className="space-y-3.5">
+            {items.map((item, i) => {
+                const label = translate(item[labelKey]);
+                const pct   = Math.round((item.count / max) * 100);
+                return (
+                    <div key={i}>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {showFlag && (
+                                    <span className="text-base leading-none flex-shrink-0 select-none">
+                                        {flagEmoji(item[labelKey])}
+                                    </span>
+                                )}
+                                <span className="text-xs font-medium text-gray-700 truncate">{label}</span>
+                            </div>
+                            <span className="text-xs font-mono text-gray-400 flex-shrink-0 ml-3">{item.count}</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${pct}%`, backgroundColor: color }}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 const TYPE_META = {
     url:   { icon: Globe,     label: 'URL',   color: 'text-blue-600 bg-blue-50 border-blue-100' },
@@ -65,6 +171,7 @@ export default function QrDetail({ qr, stats }) {
     const [editing, setEditing]           = useState(false);
     const [clientErrors, setClientErrors] = useState({});
     const [touched, setTouched]           = useState({});
+    const [qrReady, setQrReady]           = useState(false);
 
     // PDF state
     const [pdfFile, setPdfFile]           = useState(null);
@@ -124,6 +231,7 @@ export default function QrDetail({ qr, stats }) {
             if (qrRef.current) {
                 qrRef.current.innerHTML = '';
                 qrInstance.current.append(qrRef.current);
+                requestAnimationFrame(() => setQrReady(true));
             }
         } catch (err) {
             console.error('[QrDetail] Error al inicializar QR:', err);
@@ -321,6 +429,11 @@ export default function QrDetail({ qr, stats }) {
                             className="relative rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center"
                             style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
                         >
+                            {/* Shimmer skeleton hasta que el QR esté pintado */}
+                            <div
+                                className="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse transition-opacity duration-300"
+                                style={{ opacity: qrReady ? 0 : 1, pointerEvents: 'none' }}
+                            />
                             <div
                                 ref={qrRef}
                                 style={{
@@ -328,6 +441,8 @@ export default function QrDetail({ qr, stats }) {
                                     top: '50%', left: '50%',
                                     transform: `translate(-50%, -50%) scale(${scale})`,
                                     transformOrigin: 'center center',
+                                    opacity: qrReady ? 1 : 0,
+                                    transition: 'opacity 0.3s ease',
                                 }}
                             />
                         </div>
@@ -746,30 +861,32 @@ export default function QrDetail({ qr, stats }) {
                         {/* Devices */}
                         {stats.devices?.length > 0 && (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <div className="flex items-center gap-1.5 mb-4">
+                                <div className="flex items-center gap-1.5 mb-5">
                                     <Monitor size={14} className="text-gray-400" />
                                     <h3 className="text-sm font-semibold text-gray-700">Dispositivos</h3>
                                 </div>
-                                <ResponsiveContainer width="100%" height={140}>
-                                    <PieChart>
-                                        <Pie
-                                            data={stats.devices.map(d => ({ ...d, device: deviceLabel(d.device) }))}
-                                            dataKey="count" nameKey="device" cx="50%" cy="50%" outerRadius={60}
-                                        >
-                                            {stats.devices.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                        </Pie>
-                                        <Tooltip formatter={(v, n) => [v, n]} contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-3">
+                                <div className="space-y-4">
                                     {stats.devices.map((d, i) => {
                                         const total = stats.devices.reduce((s, x) => s + x.count, 0);
                                         const pct = total ? Math.round((d.count / total) * 100) : 0;
                                         return (
-                                            <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600">
-                                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                                <span>{deviceLabel(d.device)}</span>
-                                                <span className="text-gray-400 font-mono">{pct}%</span>
+                                            <div key={i}>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                                        <span className="text-xs font-medium text-gray-700 truncate">{deviceLabel(d.device)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                                        <span className="text-xs font-mono text-gray-500">{pct}%</span>
+                                                        <span className="text-xs text-gray-400">({d.count})</span>
+                                                    </div>
+                                                </div>
+                                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-700"
+                                                        style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                                                    />
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -784,15 +901,7 @@ export default function QrDetail({ qr, stats }) {
                                     <Globe size={14} className="text-gray-400" />
                                     <h3 className="text-sm font-semibold text-gray-700">Navegadores</h3>
                                 </div>
-                                <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={stats.browsers.map(b => ({ ...b, browser: translate(b.browser) }))} layout="vertical" margin={{ left: 0, right: 8 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                        <YAxis dataKey="browser" type="category" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} axisLine={false} tickLine={false} />
-                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }} />
-                                        <Bar dataKey="count" name="Escaneos" fill="#000" radius={[0, 6, 6, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <StatList items={stats.browsers} labelKey="browser" color="#000000" />
                             </div>
                         )}
 
@@ -803,15 +912,7 @@ export default function QrDetail({ qr, stats }) {
                                     <Monitor size={14} className="text-gray-400" />
                                     <h3 className="text-sm font-semibold text-gray-700">Sistema operativo</h3>
                                 </div>
-                                <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={stats.os.map(o => ({ ...o, os: translate(o.os) }))} layout="vertical" margin={{ left: 0, right: 8 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                        <YAxis dataKey="os" type="category" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} axisLine={false} tickLine={false} />
-                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }} />
-                                        <Bar dataKey="count" name="Escaneos" fill="#374151" radius={[0, 6, 6, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <StatList items={stats.os} labelKey="os" color="#374151" />
                             </div>
                         )}
 
@@ -822,15 +923,7 @@ export default function QrDetail({ qr, stats }) {
                                     <Globe size={14} className="text-gray-400" />
                                     <h3 className="text-sm font-semibold text-gray-700">Top países</h3>
                                 </div>
-                                <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={stats.countries.map(c => ({ ...c, country: translate(c.country) }))} layout="vertical" margin={{ left: 0, right: 8 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                                        <YAxis dataKey="country" type="category" tick={{ fontSize: 11, fill: '#6b7280' }} width={90} axisLine={false} tickLine={false} />
-                                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }} />
-                                        <Bar dataKey="count" name="Escaneos" fill="#6B7280" radius={[0, 6, 6, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <StatList items={stats.countries} labelKey="country" color="#6B7280" showFlag />
                             </div>
                         )}
 
@@ -841,21 +934,7 @@ export default function QrDetail({ qr, stats }) {
                                     <MapPin size={14} className="text-gray-400" />
                                     <h3 className="text-sm font-semibold text-gray-700">Top ciudades</h3>
                                 </div>
-                                <div className="space-y-2.5">
-                                    {stats.cities.map((c, i) => {
-                                        const max = stats.cities[0]?.count || 1;
-                                        const pct = Math.round((c.count / max) * 100);
-                                        return (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <span className="text-xs text-gray-500 w-24 truncate flex-shrink-0">{translate(c.city)}</span>
-                                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-black rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-                                                </div>
-                                                <span className="text-xs font-mono text-gray-500 w-6 text-right flex-shrink-0">{c.count}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <StatList items={stats.cities} labelKey="city" color="#9CA3AF" />
                             </div>
                         )}
                     </div>

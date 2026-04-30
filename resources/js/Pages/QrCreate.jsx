@@ -58,6 +58,7 @@ export default function QrCreate() {
     const logoInputRef = useRef(null);
     const [clientErrors, setClientErrors] = useState({});
     const [touched, setTouched]           = useState({});
+    const [qrReady, setQrReady]           = useState(false);
     const [logoFile, setLogoFile]         = useState(null);
     const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
     const [pdfFile, setPdfFile]           = useState(null);
@@ -104,6 +105,7 @@ export default function QrCreate() {
         if (qrRef.current) {
             qrRef.current.innerHTML = '';
             qrInstance.current.append(qrRef.current);
+            requestAnimationFrame(() => setQrReady(true));
         }
     }, []);
 
@@ -500,12 +502,18 @@ export default function QrCreate() {
                             style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
                         >
                             <div
+                                className="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse transition-opacity duration-300"
+                                style={{ opacity: qrReady ? 0 : 1, pointerEvents: 'none' }}
+                            />
+                            <div
                                 ref={qrRef}
                                 style={{
                                     position: 'absolute',
                                     top: '50%', left: '50%',
                                     transform: `translate(-50%, -50%) scale(${scale})`,
                                     transformOrigin: 'center center',
+                                    opacity: qrReady ? 1 : 0,
+                                    transition: 'opacity 0.3s ease',
                                 }}
                             />
                         </div>

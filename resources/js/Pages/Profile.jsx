@@ -1,7 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
-import { User, Mail, AtSign, Lock, Eye, EyeOff, Save, KeyRound, Loader2, Shield, Camera } from 'lucide-react';
+import { User, Mail, AtSign, Lock, Eye, EyeOff, Save, KeyRound, Loader2, Shield, Camera, ImagePlus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 function Field({ label, icon: Icon, error, children }) {
@@ -51,43 +52,77 @@ const inputClass = (error) =>
 export default function Profile({ user }) {
     const avatarInputRef = useRef(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
-    const avatarForm = useForm({ avatar: null });
+    const [avatarFile, setAvatarFile]       = useState(null);
+
+    const profileForm = useForm({
+        name:     user.name     ?? '',
+        username: user.username ?? '',
+        email:    user.email    ?? '',
+    });
+
+    const passwordForm = useForm({
+        current_password:      '',
+        password:              '',
+        password_confirmation: '',
+    });
 
     const handleAvatarFile = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        avatarForm.setData('avatar', file);
+
+        // Client-side validation
+        const maxMb = 2;
+        if (file.size > maxMb * 1024 * 1024) {
+            toast.error(`La foto no puede superar ${maxMb} MB.`);
+            return;
+        }
+        const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowed.includes(file.type)) {
+            toast.error('Formato no válido. Usa JPG, PNG, GIF o WEBP.');
+            return;
+        }
+
+        setAvatarFile(file);
         setAvatarPreview(URL.createObjectURL(file));
     };
 
-    const uploadAvatar = (e) => {
-        e.preventDefault();
-        if (!avatarForm.data.avatar) return;
-        avatarForm.post(route('profile.avatar'), {
-            forceFormData: true,
-            onSuccess: () => { toast.success('Foto de perfil actualizada'); setAvatarPreview(null); avatarForm.reset(); },
-            onError: () => toast.error('Error al subir la foto'),
-        });
+    const clearAvatar = () => {
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        if (avatarInputRef.current) avatarInputRef.current.value = '';
     };
-
-    const profileForm = useForm({
-        name: user.name ?? '',
-        username: user.username ?? '',
-        email: user.email ?? '',
-    });
-
-    const passwordForm = useForm({
-        current_password: '',
-        password: '',
-        password_confirmation: '',
-    });
 
     const saveProfile = (e) => {
         e.preventDefault();
-        profileForm.patch(route('profile.update'), {
-            onSuccess: () => toast.success('Perfil actualizado'),
-            onError: () => toast.error('Error al actualizar'),
-        });
+
+        const onError = (errs) => {
+            const first = Object.values(errs)[0];
+            toast.error(first || 'Error al actualizar el perfil.');
+        };
+
+        if (avatarFile) {
+            // Send multipart (profile data + avatar in one request)
+            const fd = new FormData();
+            fd.append('_method', 'PATCH');
+            fd.append('name',     profileForm.data.name);
+            fd.append('username', profileForm.data.username);
+            fd.append('email',    profileForm.data.email);
+            fd.append('avatar',   avatarFile);
+
+            router.post(route('profile.update'), fd, {
+                forceFormData: true,
+                onSuccess: () => {
+                    toast.success('Perfil y foto actualizados');
+                    clearAvatar();
+                },
+                onError,
+            });
+        } else {
+            profileForm.patch(route('profile.update'), {
+                onSuccess: () => toast.success('Perfil actualizado'),
+                onError,
+            });
+        }
     };
 
     const savePassword = (e) => {
@@ -97,11 +132,15 @@ export default function Profile({ user }) {
                 toast.success('Contraseña actualizada');
                 passwordForm.reset();
             },
-            onError: () => toast.error('Error al cambiar contraseña'),
+            onError: (errs) => {
+                const first = Object.values(errs)[0];
+                toast.error(first || 'Error al cambiar la contraseña.');
+            },
         });
     };
 
     const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
+    const currentAvatar = avatarPreview || user.avatar_url;
 
     return (
         <AuthenticatedLayout>
@@ -110,68 +149,66 @@ export default function Profile({ user }) {
 
             <div className="py-10 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-5">
 
-                {/* Header card — avatar + info */}
-                <div
-                    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center gap-5
-                        animate-in fade-in slide-in-from-bottom-3 duration-500"
-                >
-                    <div className="relative group flex-shrink-0">
-                        <form onSubmit={uploadAvatar}>
-                            <button
-                                type="button"
-                                onClick={() => avatarInputRef.current?.click()}
-                                className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-md focus:outline-none"
-                                title="Cambiar foto de perfil"
-                            >
-                                {(avatarPreview || user.avatar_url) ? (
-                                    <img
-                                        src={avatarPreview || user.avatar_url}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-black text-white flex items-center justify-center text-xl font-bold select-none">
-                                        {initials}
-                                    </div>
-                                )}
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                                    <Camera size={18} className="text-white" />
-                                </div>
-                            </button>
-                            <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
-                            {avatarForm.data.avatar && (
-                                <button
-                                    type="submit"
-                                    disabled={avatarForm.processing}
-                                    className="absolute -bottom-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-800 transition-colors"
-                                    title="Guardar foto"
-                                >
-                                    {avatarForm.processing ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
-                                </button>
-                            )}
-                        </form>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">{user.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                        <span className="inline-flex items-center mt-1.5 text-xs bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full font-medium capitalize gap-1">
-                            <Shield size={11} />
-                            {user.plan ?? 'free'}
-                        </span>
-                        <p className="text-xs text-gray-400 mt-1">Haz clic en la foto para cambiarla</p>
-                    </div>
-                </div>
-
                 {/* Profile info form */}
                 <form
                     onSubmit={saveProfile}
-                    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5
                         animate-in fade-in slide-in-from-bottom-3 duration-500"
-                    style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
                 >
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2">
                         <User size={16} className="text-gray-400" />
                         <h3 className="text-sm font-semibold text-gray-900">Información personal</h3>
+                    </div>
+
+                    {/* Avatar picker */}
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex-shrink-0">
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow border border-gray-100">
+                                {currentAvatar ? (
+                                    <img src={currentAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-black text-white flex items-center justify-center text-2xl font-bold select-none">
+                                        {initials}
+                                    </div>
+                                )}
+                            </div>
+                            {avatarPreview && (
+                                <button
+                                    type="button"
+                                    onClick={clearAvatar}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow hover:bg-red-600 transition-colors"
+                                    title="Cancelar"
+                                >
+                                    <X size={10} />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <button
+                                type="button"
+                                onClick={() => avatarInputRef.current?.click()}
+                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+                            >
+                                <Camera size={15} className="text-gray-400" />
+                                {avatarPreview ? 'Cambiar foto seleccionada' : 'Cambiar foto de perfil'}
+                            </button>
+                            {avatarPreview ? (
+                                <p className="text-xs text-amber-600 font-medium">
+                                    Nueva foto lista — se guardará al pulsar «Guardar cambios»
+                                </p>
+                            ) : (
+                                <p className="text-xs text-gray-400">JPG, PNG, GIF o WEBP · máx. 2 MB</p>
+                            )}
+                        </div>
+
+                        <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            onChange={handleAvatarFile}
+                            className="hidden"
+                        />
                     </div>
 
                     <Field label="Nombre completo" icon={User} error={profileForm.errors.name}>
@@ -207,16 +244,25 @@ export default function Profile({ user }) {
                     <button
                         type="submit"
                         disabled={profileForm.processing}
-                        className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium
+                        className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 rounded-xl text-sm font-medium
                             hover:bg-gray-800 active:scale-[0.98] transition-all duration-150
                             disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
                     >
                         {profileForm.processing ? (
                             <><Loader2 size={15} className="animate-spin" /> Guardando...</>
                         ) : (
-                            <><Save size={15} /> Guardar cambios</>
+                            <><Save size={15} /> Guardar cambios{avatarPreview ? ' y foto' : ''}</>
                         )}
                     </button>
+
+                    {/* Plan badge */}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-50">
+                        <span className="text-xs text-gray-400">Plan actual</span>
+                        <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full font-medium capitalize gap-1">
+                            <Shield size={11} />
+                            {user.plan ?? 'free'}
+                        </span>
+                    </div>
                 </form>
 
                 {/* Password form */}
@@ -224,7 +270,7 @@ export default function Profile({ user }) {
                     onSubmit={savePassword}
                     className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4
                         animate-in fade-in slide-in-from-bottom-3 duration-500"
-                    style={{ animationDelay: '160ms', animationFillMode: 'backwards' }}
+                    style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
                 >
                     <div className="flex items-center gap-2 mb-2">
                         <KeyRound size={16} className="text-gray-400" />
@@ -270,7 +316,7 @@ export default function Profile({ user }) {
                     <button
                         type="submit"
                         disabled={passwordForm.processing}
-                        className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium
+                        className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 rounded-xl text-sm font-medium
                             hover:bg-gray-800 active:scale-[0.98] transition-all duration-150
                             disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
                     >

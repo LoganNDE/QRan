@@ -23,10 +23,23 @@ class ProfileController extends Controller
 
         $data = $request->validate([
             'name'     => 'required|string|max:100',
-            'username' => ['nullable','string','max:50', Rule::unique('users')->ignore($user->id)],
-            'email'    => ['required','email', Rule::unique('users')->ignore($user->id)],
+            'username' => ['nullable', 'string', 'max:50', Rule::unique('users')->ignore($user->id)],
+            'email'    => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'avatar'   => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar_url) {
+                Storage::disk('uploads')->delete(
+                    ltrim(preg_replace('#^.*/uploads/#', '', $user->avatar_url), '/')
+                );
+            }
+            Storage::disk('uploads')->makeDirectory('avatars');
+            $path = $request->file('avatar')->store('avatars', 'uploads');
+            $data['avatar_url'] = Storage::disk('uploads')->url($path);
+        }
+
+        unset($data['avatar']);
         $user->update($data);
 
         return back()->with('success', 'Perfil actualizado');
@@ -58,9 +71,12 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if ($user->avatar_url) {
-            Storage::disk('uploads')->delete(ltrim(preg_replace('#^.*/uploads/#', '', $user->avatar_url), '/'));
+            Storage::disk('uploads')->delete(
+                ltrim(preg_replace('#^.*/uploads/#', '', $user->avatar_url), '/')
+            );
         }
 
+        Storage::disk('uploads')->makeDirectory('avatars');
         $path = $request->file('avatar')->store('avatars', 'uploads');
         $user->update(['avatar_url' => Storage::disk('uploads')->url($path)]);
 
