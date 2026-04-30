@@ -21,6 +21,20 @@ Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'));
 Route::get('/legal',   fn() => Inertia::render('Legal/LegalNotice'));
 Route::get('/terms',   fn() => Inertia::render('Legal/Terms'));
 
+// Serve uploaded media directly through Laravel (avoids symlink 403 on some hosts)
+Route::get('/storage/{type}/{file}', function (string $type, string $file) {
+    $allowed = ['logos', 'pdfs', 'avatars'];
+    if (!in_array($type, $allowed, true)) abort(404);
+
+    // Prevent path traversal
+    $file = basename($file);
+    $path = storage_path("app/public/{$type}/{$file}");
+
+    if (!file_exists($path)) abort(404);
+
+    return response()->file($path);
+})->where(['type' => '[a-z]+', 'file' => '[^/]+']);
+
 // QR Redirect (public)
 Route::get('/r/{slug}', [QrController::class, 'redirect'])->middleware('throttle:60,1');
 
